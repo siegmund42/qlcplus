@@ -209,6 +209,7 @@ public:
 
 protected:
     bool m_on;
+    uchar m_value;
     bool m_ledStyle;
 
     /*********************************************************************

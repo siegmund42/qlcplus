@@ -167,6 +167,7 @@ bool VCButton::copyFrom(const VCWidget* widget)
     setStartupIntensity(button->startupIntensity());
     setAction(button->action());
     m_on = button->m_on;
+    m_value = button->m_value;
 
     /* Copy common stuff */
     return VCWidget::copyFrom(widget);
@@ -536,13 +537,17 @@ void VCButton::slotInputValueChanged(quint32 universe, quint32 channel, uchar va
         }
         else
         {
-            if (value > 0)
+            if (value > 0) // Only toggle when the external button is pressed.
             {
-                // Only toggle when the external button is pressed.
-                pressFunction();
+                if (m_value == 0)
+                    // Only toggle if there has been a change from 0 to not 0.
+                    // Gives possibility to use faders as external input for buttons.
+                    pressFunction();
+                m_value = value;
             }
             else
             {
+                m_value = value;
                 // Work around the "internal" feedback of some controllers
                 // by updating feedback state after button release.
                 updateFeedback();
