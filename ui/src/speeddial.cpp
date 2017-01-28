@@ -529,6 +529,10 @@ void SpeedDial::slotTapClicked()
     setSpinValues(m_value);
 
     m_tapTime->restart();
+
+    // time has changed - update tap button blinking
+    updateTapTimer();
+
     emit tapped();
 }
 
