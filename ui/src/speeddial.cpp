@@ -89,7 +89,9 @@ SpeedDial::SpeedDial(QWidget* parent)
     , m_value(0)
     , m_tapTime(NULL)
     , m_tapTickTimer(NULL)
+    , m_tapTickElapseTimer(NULL)
     , m_tapTick(false)
+    , m_tapFeedbackType(Blink)
     , m_visibilityMask(DEFAULT_VISIBILITY_MASK)
 {
     new QVBoxLayout(this);
@@ -258,6 +260,16 @@ void SpeedDial::stopTimers(bool stopTime, bool stopTapTimer)
 bool SpeedDial::isTapTick()
 {
     return m_tapTick;
+}
+
+SpeedDial::TapFeedbackType SpeedDial::tapFeedbackType()
+{
+    return m_tapFeedbackType;
+}
+
+void SpeedDial::setTapFeedbackType(SpeedDial::TapFeedbackType type)
+{
+    m_tapFeedbackType = type;
 }
 
 /*****************************************************************************
@@ -576,7 +588,7 @@ void SpeedDial::slotTapClicked()
 void SpeedDial::slotTapTimeout()
 {
     m_tapTick = !m_tapTick;
-    if(m_tapTick == true /*TODO: && user wants this kind of feedback */)
+    if(m_tapTick == true && m_tapFeedbackType == Flash)
         m_tapTickElapseTimer->start(); // turn off tap light after 1/5th of time
 
     if (m_tapTime && m_tapTime->elapsed() >= TAP_STOP_TIMEOUT)

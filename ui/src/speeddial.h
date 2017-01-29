@@ -81,6 +81,13 @@ public:
         Infinite     = 1 << 7,
     };
 
+    // Feedback types for flash button
+    enum TapFeedbackType
+    {
+        Blink,
+        Flash
+    };
+
     SpeedDial(QWidget* parent);
     ~SpeedDial();
 
@@ -103,6 +110,10 @@ public:
     void stopTimers(bool stopTime = true, bool stopTapTimer = true);
 
     bool isTapTick();
+
+    TapFeedbackType tapFeedbackType();
+
+    void setTapFeedbackType(TapFeedbackType type);
 
 signals:
     void valueChanged(int ms);
@@ -153,8 +164,9 @@ private:
 
     QTime* m_tapTime;
     QTimer* m_tapTickTimer;
-    bool m_tapTick;
     QTimer* m_tapTickElapseTimer;
+    bool m_tapTick;
+    TapFeedbackType m_tapFeedbackType;
 
     /*************************************************************************
      * Elements visibility
