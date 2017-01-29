@@ -189,7 +189,7 @@ SpeedDial::SpeedDial(QWidget* parent)
 #endif
     m_tapTickElapseTimer->setSingleShot(true);
     connect(m_tapTickElapseTimer, SIGNAL(timeout()),
-                this, SLOT(slotTapElapseTimeout()));
+                this, SLOT(slotTapTimeout()));
     
     //Hide elements according to current visibility mask
     setVisibilityMask(m_visibilityMask);
@@ -551,28 +551,22 @@ void SpeedDial::slotTapClicked()
 
 void SpeedDial::slotTapTimeout()
 {
-    if (m_tapTick == false)
+    if (m_tapTick == false) 
+    {
+        // TODO: Give user a choice between two styles of indication
+        m_tapTickElapseTimer->start(); // turn off tap light after 1/5th of time
         m_tap->setStyleSheet(tapTickSS);
+    }
     else
+    {
         m_tap->setStyleSheet(tapDefaultSS);
+    }
     m_tapTick = !m_tapTick;
-
-    // TODO: Give user a choice between two styles of indication
-    m_tapTickElapseTimer->start(); // turn off tap light after 1/5th of time
 
     if (m_tapTime && m_tapTime->elapsed() >= TAP_STOP_TIMEOUT)
     {
         stopTimers(true, false);
     }
-    emit tapTimeout();
-}
-
-void SpeedDial::slotTapElapseTimeout()
-{
-    m_tapTick = false;
-    m_tap->setStyleSheet(tapDefaultSS);
-
-    // Necessary for feedback to update 
     emit tapTimeout();
 }
 

@@ -132,7 +132,6 @@ private slots:
     void slotSpinFocusGained();
     void slotTapClicked();
     void slotTapTimeout();
-    void slotTapElapseTimeout();
 
 private:
     QTimer* m_timer;
