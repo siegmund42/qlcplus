@@ -132,6 +132,7 @@ private slots:
     void slotSpinFocusGained();
     void slotTapClicked();
     void slotTapTimeout();
+    void slotTapElapseTimeout();
 
 private:
     QTimer* m_timer;
@@ -153,6 +154,7 @@ private:
     QTime* m_tapTime;
     QTimer* m_tapTickTimer;
     bool m_tapTick;
+    QTimer* m_tapTickElapseTimer;
 
     /*************************************************************************
      * Elements visibility
