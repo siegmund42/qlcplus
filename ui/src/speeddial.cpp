@@ -296,11 +296,29 @@ void SpeedDial::updateTapTimer()
 
     if (m_tapTickTimer)
     {
-        m_tapTickTimer->setInterval(m_value);
-        // Cap m_tapTickElapseTimer's interval at 200ms for nice effect
-        m_tapTickElapseTimer->setInterval( (m_value > 1000) ? (200) : (m_value / 5));
-        m_tapTickTimer->start();
+        /* Visual feedback starts looking funny for low intervals */
+        if(m_value < 50) {
+            m_tapTick = true;
+            updateFeedback();
+        } else {
+            m_tapTickTimer->setInterval(m_value);
+            // Cap m_tapTickElapseTimer's interval at 200ms for nice effect
+            m_tapTickElapseTimer->setInterval( (m_value > 1000) ? (200) : (m_value / 5));
+            m_tapTickTimer->start();
+        }
     }
+}
+
+void SpeedDial::updateFeedback()
+{
+    /* visual feedback */
+    if (m_tapTick) 
+        m_tap->setStyleSheet(tapTickSS);
+    else
+        m_tap->setStyleSheet(tapDefaultSS);
+ 
+    /* 'real' feedback */
+    emit tapTimeout();
 }
 
 void SpeedDial::setSpinValues(int ms)
@@ -570,23 +588,17 @@ void SpeedDial::slotTapClicked()
 
 void SpeedDial::slotTapTimeout()
 {
-    if (m_tapTick == false) 
-    {
-        if (m_tapFeedbackType == Flash)
-            m_tapTickElapseTimer->start(); // turn off tap light after 1/5th of time
-        m_tap->setStyleSheet(tapTickSS);
-    }
-    else
-    {
-        m_tap->setStyleSheet(tapDefaultSS);
-    }
     m_tapTick = !m_tapTick;
+    if(m_tapTick == true && m_tapFeedbackType == Flash)
+        m_tapTickElapseTimer->start(); // turn off tap light after 1/5th of time
 
     if (m_tapTime && m_tapTime->elapsed() >= TAP_STOP_TIMEOUT)
     {
         stopTimers(true, false);
+        m_tapTick = false;
     }
-    emit tapTimeout();
+
+    updateFeedback();
 }
 
 quint16 SpeedDial::defaultVisibilityMask()
