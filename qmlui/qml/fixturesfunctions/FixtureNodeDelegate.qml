@@ -31,15 +31,19 @@ Column
 
     property Fixture cRef
     property string textLabel
-    property string nodePath
-    property var nodeChildren
+    property string itemIcon
+    property int itemType: App.FixtureDragItem
     property bool isExpanded: false
     property bool isSelected: false
+    property string nodePath    
+    property var nodeChildren
     property Item dragItem
 
     signal toggled(bool expanded, int newHeight)
     signal mouseEvent(int type, int iID, int iType, var qItem, int mouseMods)
     signal pathChanged(string oldPath, string newPath)
+
+    onCRefChanged: itemIcon = cRef ? Helpers.fixtureIconFromType(cRef.type) : ""
 
     function getItemAtPos(x, y)
     {
@@ -58,7 +62,7 @@ Column
 
         Rectangle
         {
-            visible: nodeIcon == "" ? false : true
+            visible: itemIcon == "" ? false : true
             width: visible ? parent.height : 0
             height: parent.height
             color: UISettings.bgLight
@@ -77,10 +81,10 @@ Column
         Image
         {
             id: nodeIconImg
-            visible: nodeIcon == "" ? false : true
+            visible: itemIcon == "" ? false : true
             width: visible ? parent.height : 0
             height: parent.height
-            source: cRef ? Helpers.fixtureIconFromType(cRef.type) : ""
+            source: itemIcon
         }
 
         TextInput
@@ -135,7 +139,7 @@ Column
             onTriggered:
             {
                 isExpanded = !isExpanded
-                nodeContainer.mouseEvent(App.Clicked, -1, -1, nodeContainer, modifiers)
+                nodeContainer.mouseEvent(App.Clicked, cRef ? cRef.id : -1, -1, nodeContainer, modifiers)
                 modifiers = 0
             }
         }
@@ -143,7 +147,18 @@ Column
         MouseArea
         {
             anchors.fill: parent
-            height: UISettings.listItemHeight
+
+            property bool dragActive: drag.active
+
+            onDragActiveChanged:
+            {
+                console.log("Drag changed on node: " + textLabel)
+                nodeContainer.mouseEvent(dragActive ? App.DragStarted : App.DragFinished, cRef ? cRef.id : -1, -1, nodeContainer, 0)
+            }
+
+            drag.target: dragItem
+
+            onPressed: nodeContainer.mouseEvent(App.Pressed, cRef ? cRef.id : -1, -1, nodeContainer, mouse.modifiers)
             onClicked:
             {
                 clickTimer.modifiers = mouse.modifiers
@@ -177,21 +192,24 @@ Column
                     width: nodeChildrenView.width
                     x: 20
                     //height: 35
-                    source: type.startsWith("FC") ? "qrc:/FixtureChannelDelegate.qml" : "qrc:/FixtureHeadDelegate.qml"
+                    source: type == App.ChannelDragItem ? "qrc:/FixtureChannelDelegate.qml" : "qrc:/FixtureHeadDelegate.qml"
                     onLoaded:
                     {
                         item.textLabel = label
                         item.isSelected = Qt.binding(function() { return isSelected })
                         item.dragItem = dragItem
+                        item.itemType = type
 
-                        if (type.startsWith("FC"))
+                        if (type == App.ChannelDragItem)
                         {
+                            item.isCheckable = isCheckable
                             item.isChecked = Qt.binding(function() { return isChecked })
                             item.chIndex = index
-                            item.chIcon = cRef ? fixtureManager.channelIcon(cRef.id, index) : ""
+                            item.itemIcon = cRef ? fixtureManager.channelIcon(cRef.id, index) : ""
                         }
                         else
                         {
+                            item.fixtureID = cRef ? cRef.id : -1
                             item.headIndex = head
                         }
 

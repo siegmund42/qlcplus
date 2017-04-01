@@ -24,25 +24,11 @@ import "."
 
 Item
 {
-    property string funcLabel
-    property string funcIcon
-    property int modifiers
-    property bool multipleItems: false
-    property bool fromFunctionManager: false
-
-    property var itemsList
-
-    onItemsListChanged:
-    {
-        console.log("Items in list: " + itemsList.length)
-        if (itemsList.length)
-        {
-            var funcRef = functionManager.getFunction(itemsList[0])
-            funcLabel = funcRef.name
-            funcIcon = functionManager.functionIcon(funcRef.type)
-            multipleItems = itemsList.length > 1 ? true : false
-        }
-    }
+    property string itemLabel
+    property string itemIcon
+    /** Generic list of items that this component represents */
+    property var itemsList: []
+    property bool multipleItems: itemsList.length > 1 ? true : false
 
     Rectangle
     {
@@ -60,8 +46,8 @@ Item
             id: funcEntry
             width: parent.width
             height: parent.height
-            tLabel: funcLabel
-            iSrc: funcIcon
+            tLabel: itemLabel
+            iSrc: itemIcon
         }
     }
     Rectangle

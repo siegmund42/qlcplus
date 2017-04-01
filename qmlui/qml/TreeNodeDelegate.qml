@@ -28,12 +28,16 @@ Column
     width: 350
     //height: nodeLabel.height + nodeChildrenView.height
 
+    property var cRef
     property string textLabel
-    property string nodePath
-    property var nodeChildren
+    property string itemIcon: "qrc:/folder.svg"
+    property int itemType: App.GenericDragItem
+
     property bool isExpanded: false
     property bool isSelected: false
-    property string nodeIcon: "qrc:/folder.svg"
+
+    property string nodePath
+    property var nodeChildren
     property string childrenDelegate: "qrc:/FunctionDelegate.qml"
     property string subTreeDelegate: "qrc:/TreeNodeDelegate.qml"
     property Item dragItem
@@ -69,10 +73,10 @@ Column
         Image
         {
             id: nodeIconImg
-            visible: nodeIcon == "" ? false : true
+            visible: itemIcon == "" ? false : true
             width: visible ? parent.height : 0
             height: parent.height
-            source: nodeIcon
+            source: itemIcon
         }
 
         TextInput
@@ -135,7 +139,18 @@ Column
         MouseArea
         {
             anchors.fill: parent
-            height: UISettings.listItemHeight
+
+            property bool dragActive: drag.active
+
+            onDragActiveChanged:
+            {
+                console.log("Drag changed on node: " + textLabel)
+                nodeContainer.mouseEvent(dragActive ? App.DragStarted : App.DragFinished, -1, -1, nodeContainer, 0)
+            }
+
+            drag.target: dragItem
+
+            onPressed: nodeContainer.mouseEvent(App.Pressed, -1, -1, nodeContainer, mouse.modifiers)
             onClicked:
             {
                 clickTimer.modifiers = mouse.modifiers
@@ -175,14 +190,16 @@ Column
                         item.textLabel = label
                         item.isSelected = Qt.binding(function() { return isSelected })
                         item.dragItem = dragItem
+                        if (hasOwnProperty("type") && item.hasOwnProperty("itemType"))
+                            item.itemType = type
 
                         if (hasChildren)
                         {
                             item.nodePath = nodePath + "/" + path
                             item.isExpanded = isExpanded
                             item.nodeChildren = childrenModel
-                            if (item.hasOwnProperty('nodeIcon'))
-                                item.nodeIcon = nodeContainer.nodeIcon
+                            if (item.hasOwnProperty('itemIcon'))
+                                item.itemIcon = nodeContainer.itemIcon
                             if (item.hasOwnProperty('childrenDelegate'))
                                 item.childrenDelegate = childrenDelegate
 
@@ -218,6 +235,7 @@ Column
                                 break;
                             }
 
+                            // forward the event to the parent node
                             nodeContainer.mouseEvent(type, iID, iType, qItem, mouseMods)
                         }
                     }

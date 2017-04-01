@@ -41,6 +41,27 @@ Rectangle
         onItemsCountChanged: console.log("EFX Editor selected items changed !")
     }
 
+    TimeEditTool
+    {
+        id: timeEditTool
+
+        parent: mainView
+        z: 99
+        x: rightSidePanel.x - width
+        visible: false
+        tempoType: efxEditor.tempoType
+
+        onValueChanged:
+        {
+            if (speedType == Function.FadeIn)
+                efxEditor.fadeInSpeed = val
+            else if (speedType == Function.Hold)
+                efxEditor.holdSpeed = val
+            else if (speedType == Function.FadeOut)
+                efxEditor.fadeOutSpeed = val
+        }
+    }
+
     SplitView
     {
         anchors.fill: parent
@@ -158,9 +179,14 @@ Rectangle
                     {
                         id: previewBox
                         width: editorColumn.colWidth - 5
-                        efxData: efxEditor.algorithmData
                         minimumHeight: efxeContainer.height / 6
                         maximumHeight: efxeContainer.height / 3
+                        maxPanDegrees: efxEditor.maxPanDegrees
+                        maxTiltDegrees: efxEditor.maxTiltDegrees
+
+                        efxData: efxEditor.algorithmData
+                        fixturesData: efxEditor.fixturesData
+                        animationInterval: efxEditor.duration / (efxData.length / 2)
                     }
 
                     SectionBox
@@ -203,7 +229,7 @@ Rectangle
                                                 rightSidePanel.width += mainView.width / 3
                                                 fxTreeLoader.width = mainView.width / 3
                                                 fxTreeLoader.modelProvider = efxEditor
-                                                fxTreeLoader.source = "qrc:/FixtureGroupEditor.qml"
+                                                fxTreeLoader.source = "qrc:/FixtureGroupManager.qml"
                                             }
                                             else
                                             {
@@ -289,7 +315,7 @@ Rectangle
                                     Layout.fillWidth: true
                                     Layout.columnSpan: 4
                                     model: efxEditor.fixtureList
-                                    height: count * UISettings.listItemHeight
+                                    implicitHeight: count * UISettings.listItemHeight
                                     delegate:
                                         Rectangle
                                         {
@@ -363,6 +389,7 @@ Rectangle
                                                         height: parent.height
                                                         width: height
                                                         checked: model.reverse
+                                                        onToggle: efxEditor.setFixtureReversed(fxID, head, checked)
                                                     }
                                                     Rectangle
                                                     {
@@ -380,11 +407,79 @@ Rectangle
                                                     to: 359
                                                     suffix: "°"
                                                     value: model.offset
+                                                    onValueChanged: efxEditor.setFixtureOffset(fxID, head, value)
                                                 }
 
                                             } // Row
                                         } // Rectangle
                                 } // ListView
+
+                                Rectangle
+                                {
+                                    id: newFixtureBox
+                                    Layout.fillWidth: true
+                                    Layout.columnSpan: 4
+                                    height: UISettings.bigItemHeight * 0.6
+                                    color: "transparent"
+                                    radius: 10
+                                    visible: addFixture.checked
+
+                                    RobotoText
+                                    {
+                                        id: ntText
+                                        visible: false
+                                        anchors.centerIn: parent
+                                        label: qsTr("Add a new fixture")
+                                    }
+
+                                    DropArea
+                                    {
+                                        id: newFixtureDrop
+                                        anchors.fill: parent
+
+                                        keys: [ "fixture" ]
+
+                                        states: [
+                                            State
+                                            {
+                                                when: newFixtureDrop.containsDrag
+                                                PropertyChanges
+                                                {
+                                                    target: newFixtureBox
+                                                    color: "#3F00FF00"
+                                                }
+                                                PropertyChanges
+                                                {
+                                                    target: ntText
+                                                    visible: true
+                                                }
+                                            }
+                                        ]
+
+                                        onDropped:
+                                        {
+                                            console.log("Item(s) dropped here. x: " + drag.x + " y: " + drag.y)
+
+                                            for (var i = 0; i < drag.source.itemsList.length; i++)
+                                            {
+                                                console.log("Item #" + i + " type: " + drag.source.itemsList[i].itemType)
+                                                switch(drag.source.itemsList[i].itemType)
+                                                {
+                                                    case App.UniverseDragItem:
+                                                    case App.FixtureGroupDragItem:
+                                                        efxEditor.addGroup(drag.source.itemsList[i].cRef)
+                                                    break;
+                                                    case App.FixtureDragItem:
+                                                        efxEditor.addFixture(drag.source.itemsList[i].cRef)
+                                                    break;
+                                                    case App.HeadDragItem:
+                                                        efxEditor.addHead(drag.source.itemsList[i].fixtureID, drag.source.itemsList[i].headIndex)
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             } // GridLayout
                     } // SectionBox
 
@@ -606,7 +701,103 @@ Rectangle
                                 columns: 2
                                 columnSpacing: 5
                                 rowSpacing: 4
-                            }
+
+                                // Row 1
+                                RobotoText
+                                {
+                                    id: fiLabel
+                                    label: qsTr("Fade in")
+                                    height: UISettings.listItemHeight
+                                }
+
+                                Rectangle
+                                {
+                                    Layout.fillWidth: true
+                                    height: UISettings.listItemHeight
+                                    color: UISettings.bgMedium
+
+                                    RobotoText
+                                    {
+                                        anchors.fill: parent
+                                        label: TimeUtils.timeToQlcString(efxEditor.fadeInSpeed, efxEditor.tempoType)
+
+                                        MouseArea
+                                        {
+                                            anchors.fill: parent
+                                            onDoubleClicked:
+                                            {
+                                                timeEditTool.allowFractions = Function.ByTwoFractions
+                                                timeEditTool.show(-1, this.mapToItem(mainView, 0, 0).y,
+                                                                  fiLabel.label, parent.label, Function.FadeIn)
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Row 2
+                                RobotoText
+                                {
+                                    id: hLabel
+                                    height: UISettings.listItemHeight
+                                    label: qsTr("Hold")
+                                }
+
+                                Rectangle
+                                {
+                                    Layout.fillWidth: true
+                                    height: UISettings.listItemHeight
+                                    color: UISettings.bgMedium
+
+                                    RobotoText
+                                    {
+                                        anchors.fill: parent
+                                        label: TimeUtils.timeToQlcString(efxEditor.holdSpeed, efxEditor.tempoType)
+
+                                        MouseArea
+                                        {
+                                            anchors.fill: parent
+                                            onDoubleClicked:
+                                            {
+                                                timeEditTool.allowFractions = Function.ByTwoFractions
+                                                timeEditTool.show(-1, this.mapToItem(mainView, 0, 0).y,
+                                                                  hLabel.label, parent.label, Function.Hold)
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Row 3
+                                RobotoText
+                                {
+                                    id: foLabel
+                                    height: UISettings.listItemHeight
+                                    label: qsTr("Fade out")
+                                }
+
+                                Rectangle
+                                {
+                                    Layout.fillWidth: true
+                                    height: UISettings.listItemHeight
+                                    color: UISettings.bgMedium
+
+                                    RobotoText
+                                    {
+                                        anchors.fill: parent
+                                        label: TimeUtils.timeToQlcString(efxEditor.fadeOutSpeed, efxEditor.tempoType)
+
+                                        MouseArea
+                                        {
+                                            anchors.fill: parent
+                                            onDoubleClicked:
+                                            {
+                                                timeEditTool.allowFractions = Function.ByTwoFractions
+                                                timeEditTool.show(-1, this.mapToItem(mainView, 0, 0).y,
+                                                                  foLabel.label, parent.label, Function.FadeOut)
+                                            }
+                                        }
+                                    }
+                                }
+                            } // GridLayout
                     }
 
                     SectionBox
@@ -666,7 +857,7 @@ Rectangle
 
                 } // Column
             } // Flickable
-            ScrollBar { id: sbar; flickable: editorFlickable }
+            CustomScrollBar { id: sbar; flickable: editorFlickable }
         } // Column
     } // SplitView
 }

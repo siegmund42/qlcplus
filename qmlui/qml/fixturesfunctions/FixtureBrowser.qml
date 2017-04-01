@@ -128,7 +128,7 @@ Rectangle
 
         Component.onCompleted: manufacturerList.positionViewAtIndex(manufacturerIndex, ListView.Center)
 
-        ScrollBar { flickable: manufacturerList }
+        CustomScrollBar { flickable: manufacturerList }
     }
 
     Rectangle
@@ -228,7 +228,7 @@ Rectangle
                     }
                 }
             }
-            ScrollBar { flickable: modelsList }
+            CustomScrollBar { flickable: modelsList }
         }
     }
 
@@ -269,7 +269,7 @@ Rectangle
                                 {
                                     item.textLabel = label
                                     item.nodePath = path
-                                    item.nodeIcon = ""
+                                    item.itemIcon = ""
                                     item.isExpanded = true
                                     item.childrenDelegate = "qrc:/FixtureBrowserDelegate.qml"
                                     item.nodeChildren = childrenModel
@@ -297,7 +297,7 @@ Rectangle
             } // end of Repeater
         } // end of Column
     } // end of Flickable
-    ScrollBar { flickable: searchRect }
+    CustomScrollBar { flickable: searchRect }
 
     FixtureProperties
     {

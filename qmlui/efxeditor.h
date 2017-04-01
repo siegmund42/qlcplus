@@ -48,10 +48,10 @@ class EFXEditor : public FunctionEditor
     Q_PROPERTY(int algorithmXPhase READ algorithmXPhase WRITE setAlgorithmXPhase NOTIFY algorithmXPhaseChanged)
     Q_PROPERTY(int algorithmYPhase READ algorithmYPhase WRITE setAlgorithmYPhase NOTIFY algorithmYPhaseChanged)
 
-    Q_PROPERTY(QVariantList algorithmData READ algorithmData NOTIFY algorithmDataChanged)
-
     Q_PROPERTY(QVariant fixtureList READ fixtureList NOTIFY fixtureListChanged)
     Q_PROPERTY(QVariant groupsTreeModel READ groupsTreeModel NOTIFY groupsTreeModelChanged)
+    Q_PROPERTY(qreal maxPanDegrees READ maxPanDegrees NOTIFY maxPanDegreesChanged)
+    Q_PROPERTY(qreal maxTiltDegrees READ maxTiltDegrees NOTIFY maxTiltDegreesChanged)
 
     Q_PROPERTY(int fadeInSpeed READ fadeInSpeed WRITE setFadeInSpeed NOTIFY fadeInSpeedChanged)
     Q_PROPERTY(int holdSpeed READ holdSpeed WRITE setHoldSpeed NOTIFY holdSpeedChanged)
@@ -60,6 +60,9 @@ class EFXEditor : public FunctionEditor
 
     Q_PROPERTY(int runOrder READ runOrder WRITE setRunOrder NOTIFY runOrderChanged)
     Q_PROPERTY(int direction READ direction WRITE setDirection NOTIFY directionChanged)
+
+    Q_PROPERTY(QVariantList algorithmData READ algorithmData NOTIFY algorithmDataChanged)
+    Q_PROPERTY(QVariantList fixturesData READ fixturesData NOTIFY fixturesDataChanged)
 
 public:
     EFXEditor(QQuickView *view, Doc *doc, QObject *parent = 0);
@@ -149,6 +152,20 @@ public:
     /** Returns the data model to display a tree of FixtureGroups/Fixtures */
     QVariant groupsTreeModel();
 
+    /** Return the maximum Pan/Tilt degrees gotten from a fixture list update */
+    qreal maxPanDegrees() const;
+    qreal maxTiltDegrees() const;
+
+    Q_INVOKABLE void addGroup(QVariant reference);
+
+    Q_INVOKABLE void addFixture(QVariant reference);
+
+    Q_INVOKABLE void addHead(int fixtureID, int headIndex);
+
+    Q_INVOKABLE void setFixtureReversed(quint32 fixtureID, int headIndex, bool reversed);
+
+    Q_INVOKABLE void setFixtureOffset(quint32 fixtureID, int headIndex, int offset);
+
 protected:
     void updateFixtureList();
 
@@ -162,11 +179,17 @@ signals:
     /** Notify the listeners that the fixture tree model has changed */
     void groupsTreeModelChanged();
 
+    /** Notify the listeners that the Pan/Tilt degrees have changed */
+    void maxPanDegreesChanged();
+    void maxTiltDegreesChanged();
+
 private:
     /** Reference to a ListModel representing the fixtures list for the QML UI */
     ListModel *m_fixtureList;
     /** Data model used by the QML UI to represent groups/fixtures/heads */
     TreeModel *m_fixtureTree;
+
+    qreal m_maxPanDegrees, m_maxTiltDegrees;
 
     /************************************************************************
      * Speed
@@ -210,16 +233,20 @@ signals:
      ************************************************************************/
 public:
     QVariantList algorithmData();
+    QVariantList fixturesData();
 
 private:
     void updateAlgorithmData();
 
 signals:
     void algorithmDataChanged();
+    void fixturesDataChanged();
 
 private:
-    // exchange variable with the QML world
+    /** EFX algorithm data exchanged with the QML world */
     QVariantList m_algorithmData;
+    /** Start index and direction of each fixture of the EFX */
+    QVariantList m_fixturesData;
 };
 
 #endif // EFXEDITOR_H

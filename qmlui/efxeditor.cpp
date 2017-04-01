@@ -23,14 +23,18 @@
 
 #include "efxeditor.h"
 #include "listmodel.h"
+#include "qlcfixturemode.h"
 
 #include "efx.h"
 #include "doc.h"
+#include "app.h"
 
 EFXEditor::EFXEditor(QQuickView *view, Doc *doc, QObject *parent)
     : FunctionEditor(view, doc, parent)
     , m_efx(NULL)
     , m_fixtureTree(NULL)
+    , m_maxPanDegrees(360.0)
+    , m_maxTiltDegrees(270.0)
 {
     m_view->rootContext()->setContextProperty("efxEditor", this);
 
@@ -318,12 +322,174 @@ QVariant EFXEditor::groupsTreeModel()
     return QVariant::fromValue(m_fixtureTree);
 }
 
+qreal EFXEditor::maxPanDegrees() const
+{
+    return m_maxPanDegrees;
+}
+
+qreal EFXEditor::maxTiltDegrees() const
+{
+    return m_maxTiltDegrees;
+}
+
+void EFXEditor::addGroup(QVariant reference)
+{
+    //qDebug() << "[EFXEditor::addGroup]" << reference;
+    bool listChanged = false;
+
+    if (m_efx == NULL)
+        return;
+
+    if (reference.canConvert<Universe *>())
+    {
+        Universe *uni = reference.value<Universe *>();
+
+        if (uni != NULL)
+        {
+            qDebug() << "Adding a universe";
+            for (Fixture *fixture : m_doc->fixtures()) // C++11
+            {
+                if (fixture->universe() != uni->id())
+                    continue;
+
+                for (int headIdx = 0; headIdx < fixture->heads(); headIdx++)
+                {
+                    quint32 panCh = fixture->channelNumber(QLCChannel::Pan, QLCChannel::MSB, headIdx);
+                    quint32 tiltCh = fixture->channelNumber(QLCChannel::Tilt, QLCChannel::MSB, headIdx);
+
+                    if (panCh != QLCChannel::invalid() || tiltCh != QLCChannel::invalid())
+                    {
+                        EFXFixture* ef = new EFXFixture(m_efx);
+                        GroupHead head(fixture->id(), headIdx);
+                        ef->setHead(head);
+
+                        if (m_efx->addFixture(ef) == false)
+                            delete ef;
+                        else
+                            listChanged = true;
+                    }
+                }
+            }
+        }
+    }
+    else if (reference.canConvert<FixtureGroup *>())
+    {
+        FixtureGroup *group = reference.value<FixtureGroup *>();
+
+        if (group != NULL)
+        {
+            qDebug() << "Adding a fixture group";
+            for (GroupHead head : group->headList())
+            {
+                Fixture* fixture = m_doc->fixture(head.fxi);
+                if (fixture == NULL)
+                    continue;
+
+                quint32 panCh = fixture->channelNumber(QLCChannel::Pan, QLCChannel::MSB, head.head);
+                quint32 tiltCh = fixture->channelNumber(QLCChannel::Tilt, QLCChannel::MSB, head.head);
+
+                if (panCh != QLCChannel::invalid() || tiltCh != QLCChannel::invalid())
+                {
+                    EFXFixture* ef = new EFXFixture(m_efx);
+                    ef->setHead(head);
+                    if (m_efx->addFixture(ef) == false)
+                        delete ef;
+                    else
+                        listChanged = true;
+                }
+            }
+        }
+    }
+
+    if (listChanged)
+        updateFixtureList();
+}
+
+void EFXEditor::addFixture(QVariant reference)
+{
+    if (m_efx == NULL)
+        return;
+
+    if (reference.canConvert<Fixture *>() == false)
+        return;
+
+    Fixture *fixture = reference.value<Fixture *>();
+
+    for (int headIdx = 0; headIdx < fixture->heads(); headIdx++)
+    {
+        quint32 panCh = fixture->channelNumber(QLCChannel::Pan, QLCChannel::MSB, headIdx);
+        quint32 tiltCh = fixture->channelNumber(QLCChannel::Tilt, QLCChannel::MSB, headIdx);
+
+        if (panCh != QLCChannel::invalid() || tiltCh != QLCChannel::invalid())
+        {
+            EFXFixture* ef = new EFXFixture(m_efx);
+            GroupHead head(fixture->id(), headIdx);
+            ef->setHead(head);
+
+            if (m_efx->addFixture(ef) == false)
+                delete ef;
+            else
+                updateFixtureList();
+        }
+    }
+}
+
+void EFXEditor::addHead(int fixtureID, int headIndex)
+{
+    if (m_efx == NULL)
+        return;
+
+    GroupHead head(fixtureID, headIndex);
+    EFXFixture* ef = new EFXFixture(m_efx);
+    ef->setHead(head);
+
+    if (m_efx->addFixture(ef) == false)
+        delete ef;
+    else
+        updateFixtureList();
+}
+
+void EFXEditor::setFixtureReversed(quint32 fixtureID, int headIndex, bool reversed)
+{
+    if (m_efx == NULL)
+        return;
+
+    for (EFXFixture *efxFixture : m_efx->fixtures()) // C++11
+    {
+        if (efxFixture->head().fxi != fixtureID || efxFixture->head().head != headIndex)
+            continue;
+
+        efxFixture->setDirection(reversed ? Function::Backward : Function::Forward);
+        updateAlgorithmData();
+        return;
+    }
+}
+
+void EFXEditor::setFixtureOffset(quint32 fixtureID, int headIndex, int offset)
+{
+    if (m_efx == NULL)
+        return;
+
+    for (EFXFixture *efxFixture : m_efx->fixtures()) // C++11
+    {
+        if (efxFixture->head().fxi != fixtureID || efxFixture->head().head != headIndex)
+            continue;
+
+        efxFixture->setStartOffset(offset);
+        updateAlgorithmData();
+        return;
+    }
+}
+
 void EFXEditor::updateFixtureList()
 {
     m_fixtureList->clear();
 
     if (m_efx == NULL)
         return;
+
+    qreal oldPanDegrees = m_maxPanDegrees;
+    qreal oldTiltDegrees = m_maxTiltDegrees;
 
     // listRoles << "name" << "fxID" << "head" << "isSelected" << "reverse" << "offset";
 
@@ -335,6 +501,12 @@ void EFXEditor::updateFixtureList()
 
         if (fixture == NULL || head.isValid() == false)
             continue;
+
+        if (fixture->fixtureMode() != NULL && fixture->fixtureMode()->physical().focusPanMax() > m_maxPanDegrees)
+            m_maxPanDegrees = fixture->fixtureMode()->physical().focusPanMax();
+
+        if (fixture->fixtureMode() != NULL && fixture->fixtureMode()->physical().focusTiltMax() > m_maxTiltDegrees)
+            m_maxTiltDegrees = fixture->fixtureMode()->physical().focusTiltMax();
 
         if (fixture->heads() > 1)
             fxMap.insert("name", QString("%1 [%2]").arg(fixture->name()).arg(ef->head().head));
@@ -350,6 +522,11 @@ void EFXEditor::updateFixtureList()
     }
 
     emit fixtureListChanged();
+    if (oldPanDegrees != m_maxPanDegrees)
+        emit maxPanDegreesChanged();
+    if (oldTiltDegrees != m_maxTiltDegrees)
+        emit maxTiltDegreesChanged();
+    updateAlgorithmData();
 }
 
 void EFXEditor::updateFixtureTree(Doc *doc, TreeModel *treeModel)
@@ -380,7 +557,7 @@ void EFXEditor::updateFixtureTree(Doc *doc, TreeModel *treeModel)
             {
                 QVariantList headParams;
                 headParams.append(QVariant::fromValue(NULL)); // classRef
-                headParams.append("FHG"); // type (FHG = Fixture Head from Group)
+                headParams.append(App::HeadDragItem); // type
                 headParams.append(fixture->id()); // id
                 headParams.append(grp->id()); // subid
                 headParams.append(i); // head
@@ -388,15 +565,24 @@ void EFXEditor::updateFixtureTree(Doc *doc, TreeModel *treeModel)
             }
 
             // when all the head 'leaves' have been added, set the parent node data
-            QVariantList params;
-            params.append(QVariant::fromValue(fixture)); // classRef
-            params.append("FXG"); // type
-            params.append(fixture->id()); // id
-            params.append(grp->id()); // subid
-            params.append(0); // head
+            QVariantList fxParams;
+            fxParams.append(QVariant::fromValue(fixture)); // classRef
+            fxParams.append(App::FixtureDragItem); // type
+            fxParams.append(fixture->id()); // id
+            fxParams.append(grp->id()); // subid
+            fxParams.append(0); // head
 
-            treeModel->setPathData(fxPath, params);
+            treeModel->setPathData(fxPath, fxParams);
         }
+        // add also the fixture group data
+        QVariantList grpParams;
+        grpParams.append(QVariant::fromValue(grp)); // classRef
+        grpParams.append(App::FixtureGroupDragItem); // type
+        grpParams.append(grp->id()); // id
+        grpParams.append(0); // subid
+        grpParams.append(0); // head
+
+        treeModel->setPathData(grp->name(), grpParams);
     }
 
     // add the current universes as groups
@@ -411,7 +597,7 @@ void EFXEditor::updateFixtureTree(Doc *doc, TreeModel *treeModel)
         {
             QVariantList headParams;
             headParams.append(QVariant::fromValue(NULL)); // classRef
-            headParams.append("FHU"); // type (FHU = Fixture Head from Universe)
+            headParams.append(App::HeadDragItem); // type
             headParams.append(fixture->id()); // id
             headParams.append(fixture->universe()); // subid
             headParams.append(i); // head
@@ -421,12 +607,25 @@ void EFXEditor::updateFixtureTree(Doc *doc, TreeModel *treeModel)
         // when all the channel 'leaves' have been added, set the parent node data
         QVariantList params;
         params.append(QVariant::fromValue(fixture)); // classRef
-        params.append("FXU"); // type
+        params.append(App::FixtureDragItem); // type
         params.append(fixture->id()); // id
         params.append(fixture->universe()); // subid
         params.append(0); // head
 
         treeModel->setPathData(fxPath, params);
+    }
+
+    for (Universe *universe : m_doc->inputOutputMap()->universes())
+    {
+        // add also the fixture group data
+        QVariantList uniParams;
+        uniParams.append(QVariant::fromValue(universe)); // classRef
+        uniParams.append(App::UniverseDragItem); // type
+        uniParams.append(universe->id()); // id
+        uniParams.append(0); // subid
+        uniParams.append(0); // chIdx
+
+        treeModel->setPathData(universe->name(), uniParams);
     }
 }
 
@@ -474,6 +673,7 @@ void EFXEditor::setHoldSpeed(int holdSpeed)
     m_efx->setDuration(duration);
 
     emit holdSpeedChanged(holdSpeed);
+    emit durationChanged(duration);
 }
 
 int EFXEditor::fadeOutSpeed() const
@@ -551,6 +751,11 @@ QVariantList EFXEditor::algorithmData()
     return m_algorithmData;
 }
 
+QVariantList EFXEditor::fixturesData()
+{
+    return m_fixturesData;
+}
+
 void EFXEditor::updateAlgorithmData()
 {
     if (m_efx == NULL)
@@ -560,7 +765,10 @@ void EFXEditor::updateAlgorithmData()
     m_efx->preview(polygon);
 
     m_algorithmData.clear();
+    m_fixturesData.clear();
 
+    /** 1- fill a QVariantList or XY coordinates representing
+     *  the EFX algorithm */
     for (int i = 0; i < polygon.size(); i++)
     {
         QPointF pt = polygon.at(i);
@@ -568,7 +776,55 @@ void EFXEditor::updateAlgorithmData()
         m_algorithmData.append(pt.y());
     }
 
+    /** 2- for each fixture, find the closest XY coordinate
+     *  along the EFX algorithm, and store the start index and
+     *  the direction of the animation that will happen in the UI
+     *  NOTE: the data array is filled backward to display first fixtures on top */
+    for (EFXFixture *fixture : m_efx->fixtures()) // C++11
+    {
+        float distance = 1000.0;
+        float x = 0, y = 0;
+        int pathIdx = 0;
+
+        /** Append the delta to apply on each animation step */
+        if (fixture->direction() == Function::Forward)
+            m_fixturesData.prepend(1);
+        else
+            m_fixturesData.prepend(-1);
+
+        /** Pre-determined case. Easy to solve */
+        if (fixture->startOffset() == 0)
+        {
+            if (fixture->direction() == Function::Forward)
+                m_fixturesData.prepend(0);
+            else
+                m_fixturesData.prepend(polygon.count() - 1);
+        }
+        else
+        {
+            /** With a start offset, we need scan the algorithm points
+             *  to find the index of the closest one */
+            m_efx->calculatePoint(fixture->direction(), fixture->startOffset(), 0, &x, &y);
+            qDebug() << "Got position:" << x << y << fixture->startOffset();
+
+            for (int i = 0; i < polygon.count(); i++)
+            {
+                QPointF delta = QPointF(x, y) - polygon.at(i);
+                qreal pointsDist = delta.manhattanLength();
+
+                if (pointsDist < distance)
+                {
+                    pathIdx = i;
+                    distance = pointsDist;
+                }
+            }
+            //qDebug() << "Closest point found at index" << pathIdx;
+            m_fixturesData.prepend(pathIdx);
+        }
+    }
+
     emit algorithmDataChanged();
+    emit fixturesDataChanged();
 }
 
 

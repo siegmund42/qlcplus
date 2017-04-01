@@ -31,9 +31,11 @@ Rectangle
     color: "transparent"
 
     property int chIndex
-    property string chIcon: ""
     property string textLabel
+    property string itemIcon: ""
+    property int itemType: App.ChannelDragItem
     property bool isSelected: false
+    property bool isCheckable: false
     property bool isChecked: false
     property Item dragItem
 
@@ -52,6 +54,7 @@ Rectangle
         CustomCheckBox
         {
             id: chCheckBox
+            visible: isCheckable
             height: UISettings.listItemHeight
             checked: isChecked
             width: height
@@ -64,12 +67,13 @@ Rectangle
             height: UISettings.listItemHeight
             width: chDelegate.width - chCheckBox.width
             tLabel: textLabel
-            iSrc: chIcon
+            iSrc: itemIcon
 
             MouseArea
             {
                 anchors.fill: parent
 
+                onPressed: chDelegate.mouseEvent(App.Pressed, chIndex, -1, chDelegate, mouse.modifiers)
                 onClicked: chDelegate.mouseEvent(App.Clicked, chIndex, -1, chDelegate, mouse.modifiers)
                 onDoubleClicked: chDelegate.mouseEvent(App.DoubleClicked, chIndex, -1, chDelegate, -1)
             }
