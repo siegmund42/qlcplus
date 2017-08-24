@@ -8,7 +8,8 @@ TARGET = qlcplus-qml
 
 QT += qml quick widgets svg
 QT += multimedia multimediawidgets
-QT += 3dcore 3drender 3dquick 3dquickextras
+QT += printsupport
+QT += 3dcore 3drender 3dinput 3dquick 3dquickextras
 
 # Additional import path used to resolve QML modules in Qt Creator's code model
 QML_IMPORT_PATH =
@@ -23,17 +24,16 @@ LIBS            += -lqlcplusengine
 #win32:QMAKE_LFLAGS += -shared
 win32:RC_FILE = qmlui.rc
 
-DEFINES += MESHESDIR=\\\"$$INSTALLROOT/$$DATADIR/meshes\\\"
-
 HEADERS += \
     app.h \
     audioeditor.h \
-    actionmanager.h \
     chasereditor.h \
     collectioneditor.h \
+    colorfilters.h \
     contextmanager.h \
     efxeditor.h \
     fixturebrowser.h \
+    fixturegroupeditor.h \
     fixturemanager.h \
     functioneditor.h \
     functionmanager.h \
@@ -48,17 +48,20 @@ HEADERS += \
     sceneeditor.h \
     showmanager.h \
     treemodel.h \
-    treemodelitem.h
+    treemodelitem.h \
+    videoeditor.h \
+    videoprovider.h
 
 SOURCES += main.cpp \
     app.cpp \
     audioeditor.cpp \
-    actionmanager.cpp \
     chasereditor.cpp \
     collectioneditor.cpp \
+    colorfilters.cpp \
     contextmanager.cpp \
     efxeditor.cpp \
     fixturebrowser.cpp \
+    fixturegroupeditor.cpp \
     fixturemanager.cpp \
     functioneditor.cpp \
     functionmanager.cpp \
@@ -73,8 +76,9 @@ SOURCES += main.cpp \
     sceneeditor.cpp \
     showmanager.cpp \
     treemodel.cpp \
-    treemodelitem.cpp
-
+    treemodelitem.cpp \
+    videoeditor.cpp \
+    videoprovider.cpp
 
 #############################################
 #  Virtual Console

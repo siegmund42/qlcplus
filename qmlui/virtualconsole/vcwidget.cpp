@@ -42,6 +42,7 @@ VCWidget::VCWidget(Doc *doc, QObject *parent)
     , m_hasCustomForegroundColor(false)
     , m_hasCustomFont(false)
     , m_page(0)
+    , m_intensityOverrideId(Function::invalidAttributeId())
     , m_intensity(1.0)
     , m_isEditing(false)
 {
@@ -431,6 +432,24 @@ void VCWidget::notifyFunctionStarting(VCWidget *widget, quint32 fid, qreal fInte
  * Intensity
  *********************************************************************/
 
+void VCWidget::adjustFunctionIntensity(Function *f, qreal value)
+{
+    if (f == NULL)
+        return;
+
+    //qDebug() << "adjustFunctionIntensity" << caption() << "value" << value;
+
+    if (m_intensityOverrideId == Function::invalidAttributeId())
+        m_intensityOverrideId = f->requestAttributeOverride(Function::Intensity, value);
+    else
+        f->adjustAttribute(value, m_intensityOverrideId);
+}
+
+void VCWidget::resetIntensityOverrideAttribute()
+{
+    m_intensityOverrideId = Function::invalidAttributeId();
+}
+
 void VCWidget::adjustIntensity(qreal val)
 {
     m_intensity = val;
@@ -496,6 +515,22 @@ QVariant VCWidget::externalControlsList() const
     }
 
     return QVariant::fromValue(controlsList);
+}
+
+int VCWidget::controlIndex(quint8 id)
+{
+    /* in most cases, the control ID is equal to the index in the list,
+     * so let's check that before hand */
+    if (id < m_externalControlList.count() && m_externalControlList.at(id).id == id)
+        return id;
+
+    for (int i = 0; i < m_externalControlList.count(); i++)
+        if (m_externalControlList.at(i).id == id)
+            return i;
+
+    qDebug() << "ERROR: id" << id << "not registered in controls list !";
+
+    return 0;
 }
 
 void VCWidget::addInputSource(QSharedPointer<QLCInputSource> const& source)
@@ -565,9 +600,9 @@ QList<QSharedPointer<QLCInputSource> > VCWidget::inputSources() const
     return m_inputSources;
 }
 
-QVariant VCWidget::inputSourcesList() const
+QVariantList VCWidget::inputSourcesList()
 {
-    QVariantList sourcesList;
+    m_sourcesList.clear();
 
     for (QSharedPointer<QLCInputSource> source : m_inputSources) // C++11
     {
@@ -602,6 +637,7 @@ QVariant VCWidget::inputSourcesList() const
             sourceMap.insert("invalid", true);
         sourceMap.insert("type", Controller);
         sourceMap.insert("id", source->id());
+        sourceMap.insert("cIndex", controlIndex(source->id()));
         sourceMap.insert("uniString", uniName);
         sourceMap.insert("chString", chName);
         sourceMap.insert("universe", source->universe());
@@ -609,7 +645,7 @@ QVariant VCWidget::inputSourcesList() const
         sourceMap.insert("lower", source->lowerValue() != 0 ? source->lowerValue() : min);
         sourceMap.insert("upper", source->upperValue() != UCHAR_MAX ? source->upperValue() : max);
         sourceMap.insert("customFeedback", supportCustomFeedback);
-        sourcesList.append(sourceMap);
+        m_sourcesList.append(sourceMap);
     }
 
     QMapIterator<QKeySequence, quint32> it(m_keySequenceMap);
@@ -623,6 +659,7 @@ QVariant VCWidget::inputSourcesList() const
         QVariantMap keyMap;
         keyMap.insert("type", Keyboard);
         keyMap.insert("id", id);
+        keyMap.insert("cIndex", controlIndex(id));
 
         if (seq.isEmpty())
         {
@@ -631,10 +668,10 @@ QVariant VCWidget::inputSourcesList() const
         }
         else
             keyMap.insert("keySequence", seq.toString());
-        sourcesList.append(keyMap);
+        m_sourcesList.append(keyMap);
     }
 
-    return QVariant::fromValue(sourcesList);
+    return m_sourcesList;
 }
 
 void VCWidget::slotInputValueChanged(quint8 id, uchar value)
@@ -676,14 +713,15 @@ void VCWidget::updateKeySequence(QKeySequence oldSequence, QKeySequence newSeque
     m_keySequenceMap.remove(oldSequence);
     m_keySequenceMap[newSequence] = id;
 
+    qDebug() << "Key sequence map items:" << m_keySequenceMap.count();
+
     emit inputSourcesListChanged();
 }
 
 void VCWidget::updateKeySequenceControlID(QKeySequence sequence, quint32 id)
 {
     m_keySequenceMap[sequence] = id;
-
-    emit inputSourcesListChanged();
+    //emit inputSourcesListChanged();
 }
 
 /*****************************************************************************
@@ -979,6 +1017,58 @@ bool VCWidget::saveXMLWindowState(QXmlStreamWriter *doc)
     doc->writeAttribute(KXMLQLCWindowStateHeight, QString::number(r.height()));
 
     doc->writeEndElement();
+
+    return true;
+}
+
+bool VCWidget::saveXMLInputControl(QXmlStreamWriter *doc, quint8 controlId, QString tagName)
+{
+    Q_ASSERT(doc != NULL);
+
+    bool found = false;
+
+    for (QSharedPointer<QLCInputSource> source : m_inputSources) // C++11
+    {
+        if (source->id() != controlId)
+            continue;
+
+        if (found == false && tagName.isEmpty() == false)
+            doc->writeStartElement(tagName);
+
+        found = true;
+
+        doc->writeStartElement(KXMLQLCVCWidgetInput);
+        doc->writeAttribute(KXMLQLCVCWidgetInputUniverse, QString("%1").arg(source->universe()));
+        doc->writeAttribute(KXMLQLCVCWidgetInputChannel, QString("%1").arg(source->channel()));
+        if (source->lowerValue() != 0)
+            doc->writeAttribute(KXMLQLCVCWidgetInputLowerValue, QString::number(source->lowerValue()));
+        if (source->upperValue() != UCHAR_MAX)
+            doc->writeAttribute(KXMLQLCVCWidgetInputUpperValue, QString::number(source->upperValue()));
+        doc->writeEndElement();
+    }
+
+    auto i = m_keySequenceMap.constBegin();
+    while (i != m_keySequenceMap.constEnd())
+    {
+        if (i.value() != controlId)
+        {
+            ++i;
+            continue;
+        }
+
+        if (found == false && tagName.isEmpty() == false)
+            doc->writeStartElement(tagName);
+
+        found = true;
+
+        doc->writeTextElement(KXMLQLCVCWidgetKey, i.key().toString());
+
+        ++i;
+    }
+
+
+    if (found == true)
+        doc->writeEndElement();
 
     return true;
 }

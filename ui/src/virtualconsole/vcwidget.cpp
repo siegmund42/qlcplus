@@ -62,6 +62,7 @@ VCWidget::VCWidget(QWidget* parent, Doc* doc)
     , m_page(0)
     , m_allowChildren(false)
     , m_allowResize(true)
+    , m_intensityOverrideId(Function::invalidAttributeId())
     , m_intensity(1.0)
     , m_liveEdit(VirtualConsole::instance()->liveEdit())
 {
@@ -516,6 +517,24 @@ void VCWidget::editProperties()
  * Intensity
  *********************************************************************/
 
+void VCWidget::adjustFunctionIntensity(Function *f, qreal value)
+{
+    if (f == NULL)
+        return;
+
+    //qDebug() << "adjustFunctionIntensity" << caption() << "value" << value;
+
+    if (m_intensityOverrideId == Function::invalidAttributeId())
+        m_intensityOverrideId = f->requestAttributeOverride(Function::Intensity, value);
+    else
+        f->adjustAttribute(value, m_intensityOverrideId);
+}
+
+void VCWidget::resetIntensityOverrideAttribute()
+{
+    m_intensityOverrideId = Function::invalidAttributeId();
+}
+
 void VCWidget::adjustIntensity(qreal val)
 {
     m_intensity = val;
@@ -671,7 +690,7 @@ void VCWidget::sendFeedback(int value, QSharedPointer<QLCInputSource> src)
     if (src->needsUpdate())
         src->updateOuputValue(value);
 
-    if (acceptsInput() == false && isHidden())
+    if (acceptsInput() == false)
         return;
 
     QString chName = QString();

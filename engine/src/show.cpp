@@ -41,7 +41,7 @@
  * Initialization
  *****************************************************************************/
 
-Show::Show(Doc* doc) : Function(doc, Function::Show)
+Show::Show(Doc* doc) : Function(doc, Function::ShowType)
   , m_timeDivType(QString("Time"))
   , m_timeDivBPM(120)
   , m_latestTrackId(0)
@@ -313,7 +313,7 @@ bool Show::loadXML(QXmlStreamReader &root)
         return false;
     }
 
-    if (root.attributes().value(KXMLQLCFunctionType).toString() != typeToString(Function::Show))
+    if (root.attributes().value(KXMLQLCFunctionType).toString() != typeToString(Function::ShowType))
     {
         qWarning() << Q_FUNC_INFO << root.attributes().value(KXMLQLCFunctionType).toString()
                    << "is not a show";
@@ -433,20 +433,22 @@ void Show::slotChildStopped(quint32 fid)
  * Attributes
  *****************************************************************************/
 
-void Show::adjustAttribute(qreal fraction, int attributeIndex)
+int Show::adjustAttribute(qreal fraction, int attributeId)
 {
-    Function::adjustAttribute(fraction, attributeIndex);
+    int attrIndex = Function::adjustAttribute(fraction, attributeId);
 
     if (m_runner != NULL)
     {
         QList<Track*> trkList = m_tracks.values();
         if (trkList.isEmpty() == false &&
-            attributeIndex >= 0 && attributeIndex < trkList.count())
+            attrIndex >= 0 && attrIndex < trkList.count())
         {
-            Track *track = trkList.at(attributeIndex);
+            Track *track = trkList.at(attrIndex);
             if (track != NULL)
-                m_runner->adjustIntensity(fraction, track);
+                m_runner->adjustIntensity(getAttributeValue(attrIndex), track);
         }
     }
+
+    return attrIndex;
 }
 

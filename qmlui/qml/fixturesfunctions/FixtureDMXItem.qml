@@ -18,7 +18,7 @@
 */
 
 import QtQuick 2.2
-import com.qlcplus.classes 1.0
+import org.qlcplus.classes 1.0
 import "."
 
 Rectangle
@@ -42,7 +42,7 @@ Rectangle
 
     width: channelsRow.width
     height: fxColumn.height
-    color: "#777"
+    color: UISettings.bgLighter
     border.width: 1
     border.color: "#222"
 

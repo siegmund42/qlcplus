@@ -1,10 +1,40 @@
-qlcplus (4.10.6) stable; urgency=low
+qlcplus (4.11.1) stable; urgency=low
+
+  * engine: fixed audio files detection by prioritizing sndfile over mad
+  * engine: fixed HTP/LTP forced channels not set correctly
+  * engine: keep track of input/output device lines even if they are disconnected
+  * UI/RGB Panel: added RBG pixel type (thanks to Peter Marks)
+  * UI/Remap: fixed RGB Panels remapping
+  * UI/Input Output Manager: added a button to enable/disable USB hotplugging (disabled by default)
+  * UI/Function Live Edit: restore basic live editing of Sequences
+  * UI/RGB Matrix Editor: fixed save to Sequence feature
+  * Virtual Console/Slider: fix DMX values not updated when interacting with the mouse wheel, keyboard or Click And Go button
+  * Virtual Console/XYPad: the speed of a running EFX preset can now be controlled by a Speed Dial widget
+  * RGB Scripts: added "Random pixel per row" and "Random pixel per row multicolor" (thanks to Doug Puckett)
+  * Web access: added basic authentication support (thanks to Bartosz Grabias)
+  * Web access: fixed solo frames collapse state
+  * Web access: update feedbacks when a slider is moved
+  * New fixtures: IMG Stageline BEAM-40 WS/RGBW, Fun-Generation LED Diamond Dome (thanks to Tolmino Muccitelli)
+  * New fixture: Elation Cuepix Batten (thanks to Saul Vielmetti)
+  * New fixture: Clay Paky Tiger Scan HMI 575/1200 (thanks to Daris Tomasoni)
+  * New fixture: Litecraft WashX.21 (thanks to Hannes Braun)
+  * New fixtures: Briteq Stagepainter 12, Nicols IP Wash 120, Showtec LED Powerline 16 Bar (thanks to Fredje Gallon)
+  * New fixtures: Litecraft PowerBar AT10.sx, Stairville MH-z1915 (thanks to Thorben / Fredje)
+  * New fixtures: Martin MAC 700 Wash, ADB Warp M (thanks to Thorben)
+
+ -- Massimo Callegari <massimocallegari@yahoo.it>  Sun, 27 Aug 2017 12:13:14 +0200
+
+qlcplus (4.11.0) stable; urgency=low
 
   * engine: fixed setting start/end color while a RGB Matrix is running
   * engine: fixed crash when pausing a Show with an unavailable audio file
+  * engine: major rework of Sequences. Projects using them need to be migrated
   * UI: enabled Alt key combinations on macOS to behave like other platforms (thanks to Matt Mayfield)
   * UI/RGB Panel: added panel direction (thanks to Raivis Rengelis)
+  * UI/Fixture Manager: added weight and power consumption information on fixtures/universe selection (Chris de Rock idea)
+  * UI/Scene Editor: preserve fixture tab order when fixtures with no channels set are present
   * UI/RGB Matrix Editor: allow the preview to run even in operate mode
+  * UI/Audio Editor: added the possibility to loop an audio file (thanks to Raivis Rengelis)
   * UI/Simple Desk: fixed crash when changing values from a channel group in "fixtures view" mode
   * Virtual Console: prevent unwanted feedbacks from widgets in inactive Frame pages (thanks to Lukas Jähn)
   * Virtual Console: fixed manual selection of input channels not considering Frame pages (thanks to Lukas Jähn)
@@ -15,21 +45,26 @@ qlcplus (4.10.6) stable; urgency=low
   * Virtual Console/Frame: added the possibility to jump directly to a page and assign page names (thanks to Lukas Jähn)
   * Virtual Console/Cue List: improved linked crossfade to perform an additive blending between steps (see documentation)
   * Virtual Console/Speed Dial: improved tap button blinking and feedbacks (thanks to Lukas Jähn)
+  * Virtual Console/Speed Dial: it is now possible to copy/paste factors (thanks to Jan Dahms)
+  * Virtual Console/Clock: added external input support for countdown and stopwatch modes (thanks to Lukas Jähn)
   * Plugins/OSC: added channel number calculator in configuration page to help integrating new controllers
+  * Plugins/Loopback: fixed spurious values emitted when a lot of channels are looped
   * Web access: fixed VC Slider in percentage mode and inverted appearance (thanks to Bartosz Grabias)
   * Web access: support VC Slider reduced range when in level mode
   * Web access: improved getChannelsValues and added Simple Desk reset per-channel (sdResetChannel API)
   * Web access: implemented keypad increase/decrease buttons (thanks to Santiago Benejam Torres)
   * New input profile: Zoom R16 (thanks to Benedict Stein)
+  * New MIDI template: Akai APC40 MK2 Ableton mode (thanks to Branson Matheson)
   * New fixture: American DJ FREQ 5 Strobe (thanks to Martin Bochenek)
   * New fixture: Martin Rush MH3 (thanks to Ed Middlebrooks)
   * New fixture: Eurolite LED ACS BAR-12 (thanks to Michael Horber)
   * New fixtures: Martin Rush MH6 Wash, Cameo Studio PAR 64 RGBWA UV 12W (thanks to Piotr Nowik)
   * New fixtures: ETEC Moving Spot 60E, Cameo CLM PAR COB 1, Showtec Compact Power Lightset COB (thanks to Freasy)
+  * New fixture: Stairville Tri Flat PAR Profile 5x3W RGB (thanks to Freasy)
   * New fixture: American DJ Punch LED Pro (thanks to Benedict Stein)
   * New fixtures: Contest Mini-Head 10W, Contest Evora B2R (thanks to Fredje Gallon)
   * New fixture: Robe DJ Scan 150 XT (thanks to Allan Madsen)
-  * New fixtures: Futurelight PRO Slim PAR-12 HCL, PRO Slim PAR-12 MK2 HCL (thanks to Lukas Jähn)
+  * New fixtures: Futurelight PRO Slim PAR-12 HCL, PRO Slim PAR-12 MK2 HCL, Showtec Power Spot 9 Q5 (thanks to Lukas Jähn)
   * New fixture: Showtec XS-1W Mini Moving Beam (thanks to Habefaro)
   * New fixtures: Stage Right Stage Wash 18Wx18 LED PAR, Stage Right 7x20W COB LED Theater PAR (thanks to Collin Ong)
   * New fixture: Cameo CLPIXBAR450PRO, CLPIXBAR650PRO (thanks to Jean-Daniel Garcia & Jeremie Odermatt)
@@ -41,7 +76,7 @@ qlcplus (4.10.6) stable; urgency=low
   * New fixture: Clay Paky Alpha Spot HPE 575 (thanks to Rohmer)
   * New fixture: Robe LED Blinder 196LT (thanks to Tim Cullingworth)
   * New fixture: Chauvet COLORband T3 USB (thanks to Ian Nault)
-  * New fixtures: American DJ Dotz Matrix, Martin Jem Compact Hazer Pro (thanks to Sam Brooks)
+  * New fixtures: American DJ Dotz Matrix, Martin Jem Compact Hazer Pro,Geni Mojo Spin Master Series (thanks to Sam Brooks)
   * New fixture: American DJ XS 400 (thanks to Jared)
   * New fixture: Velleman VDP1500SM (thanks to Freddy Hoogstoel)
   * New fixture: Chauvet Intimidator Spot 355Z IRC (thanks to Michael Clements)
@@ -59,12 +94,31 @@ qlcplus (4.10.6) stable; urgency=low
   * New fixtures: Showtec: Infinity iB-5R, Compact Par 18 MKII, Phantom 20 LED Beam (thanks to Nicolò Zanon)
   * New fixture: Griven Gobostorm Plus MK2 (thanks to Attilio Bongiorni)
   * New fixture: Chauvet Freedom Stick (thanks to Jay Szewczyk)
-  * New fixture: Eurolite TMH-14 (thanks to Chris de Rock)
+  * New fixture: Eurolite TMH-14, Chauvet Intimidator Trio (thanks to Chris de Rock)
   * New fixture: Chauvet Scorpion Dual (thanks to Alan Chavis)
   * New fixture: American DJ Ultra Hex Bar 12 (thanks to Rhavin)
   * New fixture: Equinox Photon
+  * New fixture: QTX MHS-60 (thanks to Nerijus Mongirdas)
+  * New fixture: Eurolite LED TMH FE-600, MARQ Colormax Par64, Stairville CLB2.4 Compact LED PAR System (thanks to Klaus Muth)
+  * New fixture: Chauvet SlimPar Hex 6 (thanks to Yinon Sahar)
+  * New fixture: IMG Stageline PARL 20 DMX (thanks to Felix Pickenäcker)
+  * New fixtures: Pro-Lights SmartBatHEX, Fury FY250W, Fury FY250S (thanks to Lorenzo Andreani)
+  * New fixture: American DJ Ikon Profile (thanks to Ham Sadler)
+  * New fixture: HQ Power Aeron Wash 575, JB Systems Space Color Laser (thanks to Ricardo Mendes)
+  * New fixture: American DJ VPar (thanks to Eric Eskam)
+  * New fixtures: MARQ Gesture Beam/Wash 102, Colormax Bat, Gesture Spot 100 (thanks to John Yiannikakis)
+  * New fixtures: Chauvet COLORado 3P, Legend 330SR Spot, SlimPar HEX 3 (thanks to Kevin Zepp)
+  * New fixture: American DJ Mini Dekker (thanks to Chris Davis)
+  * New fixtures: American DJ Vizi BSW 300, Blizzard Lighting Flurry 5 (thanks to George Qualley)
+  * New fixtures: Pro-Lights PIXIEWASH, Accent1Q, CromoSpot300 (thanks to Tolmino Muccitelli)
+  * New fixtures: Involight LED MH50S, LED PAR 180, SBL 2000 (thanks to Facek)
+  * New fixture: Pro-Lights Miniruby (thanks to Dario Gonzalez)
+  * New fixture: Sagitter Smart DL Wash (thanks to Simu)
+  * New fixtures: Eurolite LED THA-250F, Pro-Lights StudioCOBFC (thanks to Andrea Ugolini)
+  * New fixture: American DJ Stinger Spot (thanks to Jason R. Johnston)
+  * New fixture: Stairville Blade Sting 8 RGBW Beam Mover
 
- -- Massimo Callegari <massimocallegari@yahoo.it>  Sun, 5 Mar 2017 12:13:14 +0200
+ -- Massimo Callegari <massimocallegari@yahoo.it>  Sat, 24 Jun 2017 12:13:14 +0200
 
 qlcplus (4.10.5b) stable; urgency=high
 

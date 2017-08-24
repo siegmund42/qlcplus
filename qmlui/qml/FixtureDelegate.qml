@@ -19,8 +19,7 @@
 
 import QtQuick 2.0
 
-import com.qlcplus.classes 1.0
-import "GenericHelpers.js" as Helpers
+import org.qlcplus.classes 1.0
 import "."
 
 Rectangle
@@ -52,7 +51,7 @@ Rectangle
         width: parent.width
         height: parent.height
         tLabel: textLabel
-        iSrc: cRef ? Helpers.fixtureIconFromType(cRef.type) : ""
+        iSrc: cRef ? cRef.iconResource(true) : ""
     }
     Rectangle
     {

@@ -38,8 +38,10 @@
 #include "collection.h"
 #include "function.h"
 #include "universe.h"
+#include "sequence.h"
 #include "fixture.h"
 #include "chaser.h"
+#include "script.h"
 #include "scene.h"
 #include "show.h"
 #include "efx.h"
@@ -512,7 +514,20 @@ bool Doc::replaceFixtures(QList<Fixture*> newFixturesList)
             (fixture->fixtureDef()->manufacturer() == KXMLFixtureGeneric &&
              fixture->fixtureDef()->model() == KXMLFixtureGeneric))
         {
+            // Generic dimmers just need to know the number of channels
             newFixture->setChannels(fixture->channels());
+        }
+        else if (fixture->fixtureDef() == NULL ||
+            (fixture->fixtureDef()->manufacturer() == KXMLFixtureGeneric &&
+             fixture->fixtureDef()->model() == KXMLFixtureRGBPanel))
+        {
+            // RGB Panels definitions are not cached or shared, so
+            // let's make a deep copy of them
+            QLCFixtureDef *fixtureDef = new QLCFixtureDef();
+            *fixtureDef = *fixture->fixtureDef();
+            QLCFixtureMode *mode = new QLCFixtureMode(fixtureDef);
+            *mode = *fixture->fixtureMode();
+            newFixture->setFixtureDefinition(fixtureDef, mode);
         }
         else
         {
@@ -545,58 +560,43 @@ bool Doc::replaceFixtures(QList<Fixture*> newFixturesList)
 
 bool Doc::updateFixtureChannelCapabilities(quint32 id, QList<int> forcedHTP, QList<int> forcedLTP)
 {
-    if (m_fixtures.contains(id) == true)
+    if (m_fixtures.contains(id) == false)
+        return false;
+
+    Fixture* fixture = m_fixtures[id];
+    // get exclusive access to the universes list
+    QList<Universe *> universes = inputOutputMap()->claimUniverses();
+    Universe *universe = universes.at(fixture->universe());
+
+    // Set forced HTP channels
+    fixture->setForcedHTPChannels(forcedHTP);
+
+    // Set forced LTP channels
+    fixture->setForcedLTPChannels(forcedLTP);
+
+    // Update the Fixture Universe with the current channel states
+    for (quint32 i = 0 ; i < fixture->channels(); i++)
     {
-        Fixture* fixture = m_fixtures[id];
-        // get exclusive access to the universes list
-        QList<Universe *> universes = inputOutputMap()->claimUniverses();
-        int uni = fixture->universe();
+        const QLCChannel* channel(fixture->channel(i));
 
-        // Set forced HTP channels
-        if (!forcedHTP.isEmpty())
-        {
-            fixture->setForcedHTPChannels(forcedHTP);
-
-            for(int i = 0; i < forcedHTP.count(); i++)
-            {
-                int chIdx = forcedHTP.at(i);
-                const QLCChannel* channel(fixture->channel(chIdx));
-
-                if (channel->group() == QLCChannel::Intensity)
-                    universes.at(uni)->setChannelCapability(fixture->address() + chIdx,
-                                                            channel->group(),
-                                                            Universe::ChannelType(Universe::HTP | Universe::Intensity));
-                else
-                    universes.at(uni)->setChannelCapability(fixture->address() + chIdx,
-                                                            channel->group(),
-                                                            Universe::HTP);
-            }
-        }
-        // Set forced LTP channels
-        if (!forcedLTP.isEmpty())
-        {
-            fixture->setForcedLTPChannels(forcedLTP);
-
-            for(int i = 0; i < forcedLTP.count(); i++)
-            {
-                int chIdx = forcedLTP.at(i);
-                const QLCChannel* channel(fixture->channel(chIdx));
-                universes.at(uni)->setChannelCapability(fixture->address() + chIdx, channel->group(), Universe::LTP);
-            }
-        }
+        if (forcedHTP.contains(i))
+            universe->setChannelCapability(fixture->address() + i,
+                    channel->group(), Universe::HTP);
+        else if (forcedLTP.contains(i))
+            universe->setChannelCapability(fixture->address() + i,
+                    channel->group(), Universe::LTP);
+        else
+            universe->setChannelCapability(fixture->address() + i,
+                    channel->group());
 
         // set channels modifiers
-        for (quint32 i = 0; i < fixture->channels(); i++)
-        {
-            ChannelModifier *mod = fixture->channelModifier(i);
-            universes.at(uni)->setChannelModifier(fixture->address() + i, mod);
-        }
-        inputOutputMap()->releaseUniverses(true);
-
-        return true;
+        ChannelModifier *mod = fixture->channelModifier(i);
+        universe->setChannelModifier(fixture->address() + i, mod);
     }
 
-    return false;
+    inputOutputMap()->releaseUniverses(true);
+
+    return true;
 }
 
 QList<Fixture*> const& Doc::fixtures() const
@@ -993,6 +993,91 @@ quint32 Doc::startupFunction()
     return m_startupFunctionId;
 }
 
+QList<quint32> Doc::getUsage(quint32 fid)
+{
+    QList<quint32> usageList;
+
+    foreach (Function *f, m_functions)
+    {
+        if (f->id() == fid)
+            continue;
+
+        switch(f->type())
+        {
+            case Function::CollectionType:
+            {
+                Collection *c = qobject_cast<Collection *>(f);
+                int pos = c->functions().indexOf(fid);
+                if (pos != -1)
+                {
+                    usageList.append(f->id());
+                    usageList.append(pos);
+                }
+            }
+            break;
+            case Function::ChaserType:
+
+            {
+                Chaser *c = qobject_cast<Chaser *>(f);
+                for (int i = 0; i < c->stepsCount(); i++)
+                {
+                    ChaserStep *cs = c->stepAt(i);
+                    if (cs->fid == fid)
+                    {
+                        usageList.append(f->id());
+                        usageList.append(i);
+                    }
+                }
+            }
+            break;
+            case Function::SequenceType:
+            {
+                Sequence *s = qobject_cast<Sequence *>(f);
+                if (s->boundSceneID() == fid)
+                {
+                    usageList.append(f->id());
+                    usageList.append(0);
+                }
+            }
+            break;
+            case Function::ScriptType:
+            {
+                Script *s = qobject_cast<Script *>(f);
+                QList<quint32> l = s->functionList();
+                for (int i = 0; i < l.count(); i+=2)
+                {
+                    if (l.at(i) == fid)
+                    {
+                        usageList.append(s->id());
+                        usageList.append(l.at(i + 1)); // line number
+                    }
+                }
+            }
+            break;
+            case Function::ShowType:
+            {
+                Show *s = qobject_cast<Show *>(f);
+                foreach (Track *t, s->tracks())
+                {
+                    foreach(ShowFunction *sf, t->showFunctions())
+                    {
+                        if (sf->functionID() == fid)
+                        {
+                            usageList.append(f->id());
+                            usageList.append(t->id());
+                        }
+                    }
+                }
+            }
+            break;
+            default:
+            break;
+        }
+    }
+
+    return usageList;
+}
+
 void Doc::slotFunctionChanged(quint32 fid)
 {
     setModified();
@@ -1025,7 +1110,7 @@ QPointF Doc::getAvailable2DPosition(QRectF &fxRect)
     qreal xPos = fxRect.x(), yPos = fxRect.y();
     qreal maxYOffset = 0;
 
-    QSize gridSize = m_monitorProps->gridSize();
+    QSize gridSize = QSize(m_monitorProps->gridSize().x(), m_monitorProps->gridSize().z());
     float gridUnits = 1000.0;
     if (m_monitorProps->gridUnits() == MonitorProperties::Feet)
         gridUnits = 304.8;
@@ -1218,7 +1303,7 @@ void Doc::appendToErrorLog(QString error)
         return;
 
     m_errorLog.append(error);
-    m_errorLog.append("\n");
+    m_errorLog.append("<br>");
 }
 
 void Doc::clearErrorLog()

@@ -41,8 +41,8 @@ class ContextManager : public QObject
 
     Q_PROPERTY(quint32 universeFilter READ universeFilter WRITE setUniverseFilter NOTIFY universeFilterChanged)
     Q_PROPERTY(bool hasSelectedFixtures READ hasSelectedFixtures NOTIFY selectedFixturesChanged)
-    Q_PROPERTY(QVector3D fixturesPosition READ fixturesPosition WRITE setFixturesPosition)
-    Q_PROPERTY(QVector3D fixturesRotation READ fixturesRotation WRITE setFixturesRotation)
+    Q_PROPERTY(QVector3D fixturesPosition READ fixturesPosition WRITE setFixturesPosition NOTIFY fixturesPositionChanged)
+    Q_PROPERTY(QVector3D fixturesRotation READ fixturesRotation WRITE setFixturesRotation NOTIFY fixturesRotationChanged)
 
 public:
     explicit ContextManager(QQuickView *view, Doc *doc,
@@ -62,6 +62,13 @@ public:
     /** Detach/Reattach a context from/to the application main window */
     Q_INVOKABLE void detachContext(QString name);
     Q_INVOKABLE void reattachContext(QString name);
+
+    /** Switch to the context with the given $name.
+     *  Supports both QLC+ 4 and QLC+ 5 context names */
+    void switchToContext(QString name);
+
+    /** Return the currently active context */
+    QString currentContext() const;
 
 public slots:
     /** Resets the data structures and update the currently enabled views */
@@ -121,6 +128,8 @@ public:
 
     Q_INVOKABLE void toggleFixturesSelection();
 
+    Q_INVOKABLE void updateFixturesCapabilities();
+
     Q_INVOKABLE void setRectangleSelection(qreal x, qreal y, qreal width, qreal height);
 
     bool hasSelectedFixtures();
@@ -160,6 +169,8 @@ protected slots:
 
 signals:
     void selectedFixturesChanged();
+    void fixturesPositionChanged();
+    void fixturesRotationChanged();
 
 private:
     /** The list of the currently selected Fixture IDs */
@@ -179,7 +190,7 @@ private:
      * DMX channels dump
      *********************************************************************/
 public:
-    Q_INVOKABLE void dumpDmxChannels();
+    Q_INVOKABLE void dumpDmxChannels(QString name);
 
     /** Resets the current values used for dumping or preview */
     Q_INVOKABLE void resetDumpValues();

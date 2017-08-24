@@ -67,7 +67,7 @@ class Fixture : public QObject
 
     Q_PROPERTY(quint32 id READ id CONSTANT)
     Q_PROPERTY(QString name READ name WRITE setName NOTIFY changed)
-    Q_PROPERTY(QString typeString READ typeString CONSTANT)
+    Q_PROPERTY(int type READ type CONSTANT)
     Q_PROPERTY(quint32 universe READ universe WRITE setUniverse NOTIFY changed)
     Q_PROPERTY(quint32 address READ address WRITE setAddress NOTIFY changed)
     Q_PROPERTY(quint32 channels READ channels WRITE setChannels NOTIFY changed)
@@ -153,7 +153,7 @@ public:
      */
     QString typeString();
 
-    QLCFixtureDef::FixtureType type();
+    QLCFixtureDef::FixtureType type() const;
 
     /*********************************************************************
      * Universe
@@ -393,7 +393,9 @@ public:
      */
     QLCFixtureHead head(int index) const;
 
-    QIcon getIconFromType(QLCFixtureDef::FixtureType type) const;
+    Q_INVOKABLE QString iconResource(bool svg = false) const;
+
+    QIcon getIconFromType() const;
 
     QRectF degreesRange(int head) const;
 
@@ -424,8 +426,12 @@ public:
         BRG,
         GBR,
         GRB,
-        RGBW
+        RGBW,
+        RBG
     };
+#if QT_VERSION >= 0x050500
+    Q_ENUM(Components)
+#endif
 
 public:
     /** Creates and returns a definition for a generic RGB panel row */

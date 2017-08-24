@@ -19,8 +19,7 @@
 
 import QtQuick 2.2
 
-import com.qlcplus.classes 1.0
-import "GenericHelpers.js" as Helpers
+import org.qlcplus.classes 1.0
 import "."
 
 Column
@@ -43,7 +42,7 @@ Column
     signal mouseEvent(int type, int iID, int iType, var qItem, int mouseMods)
     signal pathChanged(string oldPath, string newPath)
 
-    onCRefChanged: itemIcon = cRef ? Helpers.fixtureIconFromType(cRef.type) : ""
+    onCRefChanged: itemIcon = cRef ? cRef.iconResource(true) : ""
 
     function getItemAtPos(x, y)
     {
@@ -63,10 +62,13 @@ Column
         Rectangle
         {
             visible: itemIcon == "" ? false : true
-            width: visible ? parent.height : 0
-            height: parent.height
+            y: 1
+            width: visible ? parent.height - 2 : 0
+            height: width
             color: UISettings.bgLight
             radius: height / 4
+            border.width: 1
+            border.color: UISettings.fgMedium
         }
 
         // selection rectangle
@@ -82,9 +84,12 @@ Column
         {
             id: nodeIconImg
             visible: itemIcon == "" ? false : true
-            width: visible ? parent.height : 0
-            height: parent.height
+            x: 1
+            y: 1
+            width: visible ? parent.height - 2 : 0
+            height: width
             source: itemIcon
+            sourceSize: Qt.size(width, height)
         }
 
         TextInput
@@ -92,7 +97,7 @@ Column
             property string originalText
 
             id: nodeLabel
-            x: nodeIconImg.width + 1
+            x: nodeIconImg.width + 2
             z: 0
             width: parent.width - nodeIconImg.width - 1
             height: UISettings.listItemHeight
@@ -125,6 +130,14 @@ Column
                 disableEditing()
                 nodeLabel.text = originalText
             }
+        }
+
+        RobotoText
+        {
+            anchors.right: parent.right
+            height: UISettings.listItemHeight
+            label: cRef ? "" + (cRef.address + 1) + "-" + (cRef.address + cRef.channels + 1) : ""
+
         }
 
         Timer
@@ -195,26 +208,27 @@ Column
                     source: type == App.ChannelDragItem ? "qrc:/FixtureChannelDelegate.qml" : "qrc:/FixtureHeadDelegate.qml"
                     onLoaded:
                     {
+                        console.log("Channel node, fixture " + cRef + " index: " + chIdx)
                         item.textLabel = label
                         item.isSelected = Qt.binding(function() { return isSelected })
                         item.dragItem = dragItem
                         item.itemType = type
 
+                        if (item.hasOwnProperty('cRef'))
+                            item.cRef = classRef
+
                         if (type == App.ChannelDragItem)
                         {
                             item.isCheckable = isCheckable
                             item.isChecked = Qt.binding(function() { return isChecked })
-                            item.chIndex = index
-                            item.itemIcon = cRef ? fixtureManager.channelIcon(cRef.id, index) : ""
+                            item.chIndex = chIdx
+                            item.itemIcon = cRef ? fixtureManager.channelIcon(cRef.id, chIdx) : ""
                         }
                         else
                         {
                             item.fixtureID = cRef ? cRef.id : -1
                             item.headIndex = head
                         }
-
-                        if (item.hasOwnProperty('cRef'))
-                            item.cRef = classRef
                     }
                     Connections
                     {

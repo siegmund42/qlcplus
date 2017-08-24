@@ -20,7 +20,7 @@
 import QtQuick 2.0
 import QtQuick.Controls 1.1
 
-import com.qlcplus.classes 1.0
+import org.qlcplus.classes 1.0
 import "."
 
 Rectangle
@@ -160,8 +160,8 @@ Rectangle
                 anchors.verticalCenter: parent.verticalCenter
                 source: "qrc:/arrow-right.svg"
                 sourceSize: Qt.size(width, height)
-                height: 26
-                width: 18
+                height: parent.height
+                width: height * 0.8
             }
 
             RobotoText
@@ -183,6 +183,7 @@ Rectangle
                 onClicked:
                 {
                     fxPropsRect.visible = false
+                    panelPropsRect.visible = false
                     fixtureBrowser.selectedManufacturer = ""
                 }
             }
@@ -224,7 +225,16 @@ Rectangle
                     {
                         modelsList.currentIndex = index
                         fixtureBrowser.selectedModel = modelData
-                        fxPropsRect.visible = true
+                        if (modelData == "Generic RGB Panel")
+                        {
+                            fxPropsRect.visible = false
+                            panelPropsRect.visible = true
+                        }
+                        else
+                        {
+                            panelPropsRect.visible = false
+                            fxPropsRect.visible = true
+                        }
                     }
                 }
             }
@@ -287,7 +297,6 @@ Rectangle
                                         qItem.manufacturer = item.nodePath
                                         fixtureBrowser.selectedManufacturer = qItem.manufacturer
                                         fixtureBrowser.selectedModel = qItem.textLabel
-                                        fxPropsRect.fxName = qItem.textLabel
                                         fxPropsRect.visible = true
                                     }
                                 }
@@ -302,6 +311,17 @@ Rectangle
     FixtureProperties
     {
         id: fxPropsRect
+        anchors.right: parent.right
+        anchors.left: parent.left
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 8
+        visible: false
+    }
+
+    RGBPanelProperties
+    {
+        objectName: "RGBPanelProps"
+        id: panelPropsRect
         anchors.right: parent.right
         anchors.left: parent.left
         anchors.bottom: parent.bottom

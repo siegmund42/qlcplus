@@ -108,7 +108,7 @@ QString Fixture::typeString()
         return QString(KXMLFixtureDimmer);
 }
 
-QLCFixtureDef::FixtureType Fixture::type()
+QLCFixtureDef::FixtureType Fixture::type() const
 {
     if (m_fixtureDef != NULL)
         return m_fixtureDef->type();
@@ -510,23 +510,33 @@ QLCFixtureHead Fixture::head(int index) const
         return QLCFixtureHead();
 }
 
-QIcon Fixture::getIconFromType(QLCFixtureDef::FixtureType type) const
+QString Fixture::iconResource(bool svg) const
 {
-    switch(type)
+    QString prefix = svg ? "qrc" : "";
+    QString ext = svg ? "svg" : "png";
+
+    switch(type())
     {
-        case QLCFixtureDef::ColorChanger: return QIcon(":/fixture.png");
-        case QLCFixtureDef::Dimmer: return QIcon(":/dimmer.png");
-        case QLCFixtureDef::Effect: return QIcon(":/effect.png");
-        case QLCFixtureDef::Fan: return QIcon(":/fan.png");
-        case QLCFixtureDef::Flower: return QIcon(":/flower.png");
-        case QLCFixtureDef::Hazer: return QIcon(":/hazer.png");
-        case QLCFixtureDef::Laser: return QIcon(":/laser.png");
-        case QLCFixtureDef::MovingHead: return QIcon(":/movinghead.png");
-        case QLCFixtureDef::Scanner: return QIcon(":/scanner.png");
-        case QLCFixtureDef::Smoke: return QIcon(":/smoke.png");
-        case QLCFixtureDef::Strobe: return QIcon(":/strobe.png");
-        default: return QIcon(":/other.png");
+        case QLCFixtureDef::ColorChanger: return QString("%1:/fixture.%2").arg(prefix).arg(ext); break;
+        case QLCFixtureDef::Dimmer: return QString("%1:/dimmer.%2").arg(prefix).arg(ext); break;
+        case QLCFixtureDef::Effect: return QString("%1:/effect.%2").arg(prefix).arg(ext); break;
+        case QLCFixtureDef::Fan: return QString("%1:/fan.%2").arg(prefix).arg(ext); break;
+        case QLCFixtureDef::Flower: return QString("%1:/flower.%2").arg(prefix).arg(ext); break;
+        case QLCFixtureDef::Hazer: return QString("%1:/hazer.%2").arg(prefix).arg(ext); break;
+        case QLCFixtureDef::Laser: return QString("%1:/laser.%2").arg(prefix).arg(ext); break;
+        case QLCFixtureDef::MovingHead: return QString("%1:/movinghead.%2").arg(prefix).arg(ext); break;
+        case QLCFixtureDef::Scanner: return QString("%1:/scanner.%2").arg(prefix).arg(ext); break;
+        case QLCFixtureDef::Smoke: return QString("%1:/smoke.%2").arg(prefix).arg(ext); break;
+        case QLCFixtureDef::Strobe: return QString("%1:/strobe.%2").arg(prefix).arg(ext); break;
+        default: break;
     }
+
+    return QString("%1:/other.%2").arg(prefix).arg(ext);
+}
+
+QIcon Fixture::getIconFromType() const
+{
+    return QIcon(iconResource());
 }
 
 QRectF Fixture::degreesRange(int head) const
@@ -651,6 +661,12 @@ QLCFixtureDef *Fixture::genericRGBPanelDef(int columns, Components components)
             def->addChannel(red);
             def->addChannel(blue);
         }
+        else if (components == RBG)
+        {
+            def->addChannel(red);
+            def->addChannel(blue);
+            def->addChannel(green);
+        }
         else if (components == RGBW)
         {
             QLCChannel* white = new QLCChannel();
@@ -687,6 +703,8 @@ QLCFixtureMode *Fixture::genericRGBPanelMode(QLCFixtureDef *def, Components comp
         mode->setName("GBR");
     else if (components == GRB)
         mode->setName("GRB");
+    else if (components == RBG)
+        mode->setName("RBG");
     else if (components == RGBW)
     {
         mode->setName("RGBW");
@@ -879,7 +897,7 @@ bool Fixture::loadXML(QXmlStreamReader &xmlDoc, Doc *doc,
         fixtureDef = fixtureDefCache->fixtureDef(manufacturer, model);
         if (fixtureDef == NULL)
         {
-            doc->appendToErrorLog(QString("No fixture definition found for <%1> <%2>")
+            doc->appendToErrorLog(QString("No fixture definition found for <b>%1</b> <b>%2</b>")
                                   .arg(manufacturer)
                                   .arg(model));
         }
@@ -889,7 +907,7 @@ bool Fixture::loadXML(QXmlStreamReader &xmlDoc, Doc *doc,
             fixtureMode = fixtureDef->mode(modeName);
             if (fixtureMode == NULL)
             {
-                doc->appendToErrorLog(QString("Fixture mode <%1> not found for <%2> <%3>")
+                doc->appendToErrorLog(QString("Fixture mode <b>%1</b> not found for <b>%2</b> <b>%3</b>")
                                       .arg(modeName).arg(manufacturer).arg(model));
 
                 /* Set this also NULL so that a generic dimmer will be
@@ -902,7 +920,7 @@ bool Fixture::loadXML(QXmlStreamReader &xmlDoc, Doc *doc,
     /* Number of channels */
     if (channels <= 0)
     {
-        doc->appendToErrorLog(QString("%1 channels of fixture <%2> are our of bounds")
+        doc->appendToErrorLog(QString("%1 channels of fixture <b>%2</b> are our of bounds")
                               .arg(QString::number(channels))
                               .arg(name));
         channels = 1;
@@ -937,6 +955,7 @@ bool Fixture::loadXML(QXmlStreamReader &xmlDoc, Doc *doc,
         else if (modeName == "BRG") components = BRG;
         else if (modeName == "GBR") components = GBR;
         else if (modeName == "GRB") components = GRB;
+        else if (modeName == "RBG") components = RBG;
         else if (modeName == "RGBW")
         {
             components = RGBW;

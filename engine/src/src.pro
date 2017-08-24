@@ -78,12 +78,10 @@ HEADERS += bus.h \
            dmxsource.h \
            efx.h \
            efxfixture.h \
-           efxuistate.h \
            fadechannel.h \
            fixture.h \
            fixturegroup.h \
            function.h \
-           functionuistate.h \
            genericdmxsource.h \
            genericfader.h \
            gradient.h \
@@ -106,9 +104,9 @@ HEADERS += bus.h \
            rgbscriptscache.h \
            rgbtext.h \
            scene.h \
-           sceneuistate.h \
            scenevalue.h \
            script.h \
+           sequence.h \
            show.h \
            showfunction.h \
            showrunner.h \
@@ -158,12 +156,10 @@ SOURCES += bus.cpp \
            dmxdumpfactoryproperties.cpp \
            efx.cpp \
            efxfixture.cpp \
-           efxuistate.cpp \
            fadechannel.cpp \
            fixture.cpp \
            fixturegroup.cpp \
            function.cpp \
-           functionuistate.cpp \
            genericdmxsource.cpp \
            genericfader.cpp \
            gradient.cpp \
@@ -185,9 +181,9 @@ SOURCES += bus.cpp \
            rgbscriptscache.cpp \
            rgbtext.cpp \
            scene.cpp \
-           sceneuistate.cpp \
            scenevalue.cpp \
            script.cpp \
+           sequence.cpp \
            show.cpp \
            showfunction.cpp \
            showrunner.cpp \
@@ -265,6 +261,11 @@ macx|win32 {
     conf.commands += echo \"$$LITERAL_HASH define USERRGBSCRIPTDIR \\\"$$USERRGBSCRIPTDIR\\\"\" >> $$CONFIGFILE &&
     conf.commands += echo \"$$LITERAL_HASH define GOBODIR \\\"$$GOBODIR\\\"\" >> $$CONFIGFILE &&
     conf.commands += echo \"$$LITERAL_HASH define WEBFILESDIR \\\"$$WEBFILESDIR\\\"\" >> $$CONFIGFILE &&
+qmlui {
+    conf.commands += echo \"$$LITERAL_HASH define MESHESDIR \\\"$$MESHESDIR\\\"\" >> $$CONFIGFILE &&
+    conf.commands += echo \"$$LITERAL_HASH define COLORFILTERSDIR \\\"$$COLORFILTERSDIR\\\"\" >> $$CONFIGFILE &&
+    conf.commands += echo \"$$LITERAL_HASH define USERCOLORFILTERSDIR \\\"$$USERCOLORFILTERSDIR\\\"\" >> $$CONFIGFILE &&
+}
     conf.commands += echo \"$$LITERAL_HASH endif\" >> $$CONFIGFILE
 }
 else:unix|android|ios {
@@ -290,6 +291,11 @@ else:unix|android|ios {
     conf.commands += echo \"$$LITERAL_HASH define USERRGBSCRIPTDIR \\\"$$USERRGBSCRIPTDIR\\\"\" >> $$CONFIGFILE &&
     conf.commands += echo \"$$LITERAL_HASH define GOBODIR \\\"$$INSTALLROOT/$$GOBODIR\\\"\" >> $$CONFIGFILE &&
     conf.commands += echo \"$$LITERAL_HASH define WEBFILESDIR \\\"$$INSTALLROOT/$$WEBFILESDIR\\\"\" >> $$CONFIGFILE &&
+qmlui {
+    conf.commands += echo \"$$LITERAL_HASH define MESHESDIR \\\"$$INSTALLROOT/$$MESHESDIR\\\"\" >> $$CONFIGFILE &&
+    conf.commands += echo \"$$LITERAL_HASH define COLORFILTERSDIR \\\"$$INSTALLROOT/$$COLORFILTERSDIR\\\"\" >> $$CONFIGFILE &&
+    conf.commands += echo \"$$LITERAL_HASH define USERCOLORFILTERSDIR \\\"$$USERCOLORFILTERSDIR\\\"\" >> $$CONFIGFILE &&
+}
     conf.commands += echo \"$$LITERAL_HASH endif\" >> $$CONFIGFILE
 }
 

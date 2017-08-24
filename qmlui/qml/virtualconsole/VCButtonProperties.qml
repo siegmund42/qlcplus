@@ -19,9 +19,9 @@
 
 import QtQuick 2.0
 import QtQuick.Layouts 1.1
-import QtQuick.Controls 1.2
+import QtQuick.Controls 2.1
 
-import com.qlcplus.classes 1.0
+import org.qlcplus.classes 1.0
 import "."
 
 Rectangle
@@ -33,6 +33,7 @@ Rectangle
     property Function func
     property int funcID: widgetRef ? widgetRef.functionID : -1
     property int gridItemsHeight: UISettings.listItemHeight
+    property real startupIntensity: widgetRef ? widgetRef.startupIntensity * 100 : 100
 
     //onWidgetRefChanged: func = functionManager.getFunction(widgetRef.functionID)
 
@@ -95,7 +96,7 @@ Rectangle
                 columnSpacing: 5
                 rowSpacing: 3
 
-                ExclusiveGroup { id: pressBehaviourGroup }
+                ButtonGroup { id: pressBehaviourGroup }
 
                 // row 1
                 RobotoText
@@ -107,11 +108,11 @@ Rectangle
 
                 CustomCheckBox
                 {
-                    width: UISettings.iconSizeMedium
-                    height: width
-                    exclusiveGroup: pressBehaviourGroup
+                    implicitWidth: UISettings.iconSizeMedium
+                    implicitHeight: implicitWidth
+                    ButtonGroup.group: pressBehaviourGroup
                     checked: widgetRef ? widgetRef.actionType === VCButton.Toggle : false
-                    onCheckedChanged: if (checked && widgetRef) widgetRef.actionType = VCButton.Toggle
+                    onClicked: if (checked && widgetRef) widgetRef.actionType = VCButton.Toggle
                 }
 
                 // row 2
@@ -124,11 +125,11 @@ Rectangle
 
                 CustomCheckBox
                 {
-                    width: UISettings.iconSizeMedium
-                    height: width
-                    exclusiveGroup: pressBehaviourGroup
+                    implicitWidth: UISettings.iconSizeMedium
+                    implicitHeight: implicitWidth
+                    ButtonGroup.group: pressBehaviourGroup
                     checked: widgetRef ? widgetRef.actionType === VCButton.Flash : false
-                    onCheckedChanged: if (checked && widgetRef) widgetRef.actionType = VCButton.Flash
+                    onClicked: if (checked && widgetRef) widgetRef.actionType = VCButton.Flash
                 }
 
                 // row 3
@@ -141,11 +142,11 @@ Rectangle
 
                 CustomCheckBox
                 {
-                    width: UISettings.iconSizeMedium
-                    height: width
-                    exclusiveGroup: pressBehaviourGroup
+                    implicitWidth: UISettings.iconSizeMedium
+                    implicitHeight: implicitWidth
+                    ButtonGroup.group: pressBehaviourGroup
                     checked: widgetRef ? widgetRef.actionType === VCButton.Blackout : false
-                    onCheckedChanged: if (checked && widgetRef) widgetRef.actionType = VCButton.Blackout
+                    onClicked: if (checked && widgetRef) widgetRef.actionType = VCButton.Blackout
                 }
 
                 // row 4
@@ -158,14 +159,79 @@ Rectangle
 
                 CustomCheckBox
                 {
-                    width: UISettings.iconSizeMedium
-                    height: width
-                    exclusiveGroup: pressBehaviourGroup
+                    implicitWidth: UISettings.iconSizeMedium
+                    implicitHeight: implicitWidth
+                    ButtonGroup.group: pressBehaviourGroup
                     checked: widgetRef ? widgetRef.actionType === VCButton.StopAll : false
-                    onCheckedChanged: if (checked && widgetRef) widgetRef.actionType = VCButton.StopAll
+                    onClicked: if (checked && widgetRef) widgetRef.actionType = VCButton.StopAll
                 }
 
               } // GridLayout
         } // SectionBox
+
+        SectionBox
+        {
+            id: startupIntensityProps
+            sectionLabel: qsTr("Adjust Function intensity")
+
+            sectionContents:
+              RowLayout
+              {
+                  width: parent.width
+                  spacing: 5
+
+                  CustomCheckBox
+                  {
+                      id: startupIntCheck
+                      implicitWidth: UISettings.iconSizeMedium
+                      implicitHeight: implicitWidth
+                      autoExclusive: false
+                      checked: widgetRef ? widgetRef.startupIntensityEnabled : false
+                      onClicked: if (widgetRef) widgetRef.startupIntensityEnabled = checked
+                  }
+
+                  Slider
+                  {
+                      id: siSlider
+                      enabled: startupIntCheck.checked
+                      Layout.fillWidth: true
+                      orientation: Qt.Horizontal
+                      from: 0
+                      to: 100
+                      value: startupIntensity
+                      handle: Rectangle {
+                          x: siSlider.leftPadding + siSlider.visualPosition * (siSlider.availableWidth - width)
+                          y: siSlider.topPadding + siSlider.availableHeight / 2 - height / 2
+                          implicitWidth: UISettings.listItemHeight * 0.8
+                          implicitHeight: UISettings.listItemHeight * 0.8
+                          radius: implicitWidth / 5
+                      }
+
+                      onPositionChanged: if (widgetRef) widgetRef.startupIntensity = value / 100
+
+                      Rectangle
+                      {
+                          anchors.fill: parent
+                          z: 3
+                          color: "black"
+                          opacity: 0.6
+                          visible: !parent.enabled
+                      }
+                  }
+
+                  CustomSpinBox
+                  {
+                      id: wSpin
+                      enabled: startupIntCheck.checked
+                      width: UISettings.bigItemHeight * 0.7
+                      height: UISettings.listItemHeight
+                      from: 0
+                      to: 100
+                      suffix: "%"
+                      value: startupIntensity
+                      onValueChanged: if (widgetRef) widgetRef.startupIntensity = value / 100
+                  }
+              }
+        }
     } // Column
 }

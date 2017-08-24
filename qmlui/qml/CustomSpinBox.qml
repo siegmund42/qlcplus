@@ -26,12 +26,15 @@ SpinBox
     id: control
     font.family: UISettings.robotoFontName
     font.pixelSize: UISettings.textSizeDefault
-    width: 70
+    width: UISettings.bigItemHeight
     height: UISettings.listItemHeight
+    implicitWidth: UISettings.bigItemHeight
     implicitHeight: UISettings.listItemHeight
     editable: true
     from: 0
     to: 255
+    clip: true
+    wheelEnabled: true
 
     property bool showControls: true
     property string suffix: ""
@@ -41,16 +44,26 @@ SpinBox
     onFromChanged: if (value < from) control.value = from
     onToChanged: if (value > to) control.value = to
 
-    MouseArea
+    onFocusChanged:
+    {
+        if (focus) contentItem.selectAll()
+    }
+
+    textFromValue: function(value) {
+        return value + suffix
+    }
+
+    valueFromText: function(text) {
+        return parseInt(text.replace(suffix, ""))
+    }
+
+    Rectangle
     {
         anchors.fill: parent
-        onWheel:
-        {
-            if (wheel.angleDelta.y > 0)
-                control.value++
-            else
-                control.value--
-        }
+        z: 3
+        color: "black"
+        opacity: 0.6
+        visible: !parent.enabled
     }
 
     background: Rectangle {
@@ -65,11 +78,11 @@ SpinBox
         z: 2
         height: control.height
         font: control.font
-        text: control.textFromValue(control.value, control.locale) + suffix
+        text: control.textFromValue(control.value, control.locale)
         color: UISettings.fgMain
         selectByMouse: true
         selectionColor: UISettings.highlightPressed
-        selectedTextColor: "#ffffff"
+        selectedTextColor: "white"
         horizontalAlignment: Qt.AlignRight
         verticalAlignment: Qt.AlignVCenter
 

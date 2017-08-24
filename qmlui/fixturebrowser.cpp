@@ -35,6 +35,7 @@ FixtureBrowser::FixtureBrowser(QQuickView *view, Doc *doc, QObject *parent)
     , m_manufacturerIndex(0)
     , m_selectedManufacturer(QString())
     , m_selectedModel(QString())
+    , m_fixtureName(QString())
     , m_selectedMode(QString())
     , m_modeChannelsCount(1)
     , m_definition(NULL)
@@ -75,8 +76,14 @@ void FixtureBrowser::setSelectedManufacturer(QString selectedManufacturer)
 
 QStringList FixtureBrowser::modelsList()
 {
-    qDebug() << "[FixtureBrowser] Fixtures list for" << m_selectedManufacturer;
+    qDebug() << "[FixtureBrowser] Models list for" << m_selectedManufacturer;
     QStringList fxList = m_doc->fixtureDefCache()->models(m_selectedManufacturer);
+    if (m_selectedManufacturer == "Generic")
+    {
+        fxList << "Generic Dimmer";
+        fxList << "Generic RGB Panel";
+    }
+
     fxList.sort();
     return fxList;
 }
@@ -92,12 +99,32 @@ void FixtureBrowser::setSelectedModel(QString selectedModel)
         return;
 
     m_selectedModel = selectedModel;
+    setFixtureName(m_selectedModel);
+    m_selectedMode = QString();
     emit selectedModelChanged(selectedModel);
     emit modesListChanged();
+    emit modeChannelsCountChanged();
+    emit modeChannelListChanged();
+}
+
+QString FixtureBrowser::fixtureName() const
+{
+    return m_fixtureName;
+}
+
+void FixtureBrowser::setFixtureName(QString fixtureName)
+{
+    if (m_fixtureName == fixtureName)
+        return;
+
+    m_fixtureName = fixtureName;
+    emit fixtureNameChanged(fixtureName);
 }
 
 QStringList FixtureBrowser::modesList()
 {
+    qDebug() << "[FixtureBrowser] Modes list for" << m_selectedManufacturer << m_selectedModel;
+
     QStringList modesList;
 
     m_definition = m_doc->fixtureDefCache()->fixtureDef(m_selectedManufacturer, m_selectedModel);
@@ -106,7 +133,14 @@ QStringList FixtureBrowser::modesList()
     {
         QList<QLCFixtureMode *> fxModesList = m_definition->modes();
         foreach(QLCFixtureMode *mode, fxModesList)
+        {
             modesList.append(mode->name());
+            if (m_selectedMode.isEmpty())
+            {
+                m_selectedMode = mode->name();
+                m_modeChannelsCount = mode->channels().count();
+            }
+        }
     }
     return modesList;
 }
@@ -118,10 +152,19 @@ QString FixtureBrowser::selectedMode() const
 
 void FixtureBrowser::setSelectedMode(QString selectedMode)
 {
+    qDebug() << "[FixtureBrowser] Select mode for" << m_selectedManufacturer << m_selectedModel << selectedMode;
+
     if (m_selectedMode == selectedMode)
         return;
 
     m_selectedMode = selectedMode;
+
+    if (m_definition != NULL)
+    {
+        m_mode = m_definition->mode(m_selectedMode);
+        if (m_mode)
+            m_modeChannelsCount = m_mode->channels().count();
+    }
     emit selectedModeChanged(selectedMode);
     emit modeChannelsCountChanged();
     emit modeChannelListChanged();

@@ -37,12 +37,12 @@
 #include "fixtureselection.h"
 #include "speeddialwidget.h"
 #include "rgbmatrixeditor.h"
+#include "qlcmacros.h"
 #include "rgbimage.h"
+#include "sequence.h"
 #include "rgbitem.h"
 #include "rgbtext.h"
-#include "qlcmacros.h"
 #include "apputil.h"
-#include "chaser.h"
 #include "scene.h"
 
 #define SETTINGS_GEOMETRY "rgbmatrixeditor/geometry"
@@ -506,7 +506,7 @@ bool RGBMatrixEditor::createPreviewItems()
         {
             QLCPoint pt(x, y);
 
-            if (grp->headHash().contains(pt) == true)
+            if (grp->headsMap().contains(pt) == true)
             {
                 RGBItem* item;
                 if (m_shapeButton->isChecked() == false)
@@ -975,6 +975,8 @@ void RGBMatrixEditor::slotSaveToSequenceClicked()
 
         Scene *grpScene = new Scene(m_doc);
         grpScene->setName(grp->name());
+        grpScene->setVisible(false);
+
         QList<GroupHead> headList = grp->headList();
         foreach (GroupHead head, headList)
         {
@@ -1012,21 +1014,21 @@ void RGBMatrixEditor::slotSaveToSequenceClicked()
         if (m_matrix->runOrder() == RGBMatrix::PingPong)
             totalSteps = (totalSteps * 2) - 1;
 
-        Chaser *chaser = new Chaser(m_doc);
-        chaser->setName(m_matrix->name());
-        chaser->enableSequenceMode(grpScene->id());
-        chaser->setDurationMode(Chaser::PerStep);
-        chaser->setDuration(m_matrix->duration());
-        chaser->setStartTime(0);
+        Sequence *sequence = new Sequence(m_doc);
+        sequence->setName(QString("%1 %2").arg(m_matrix->name()).arg(tr("Sequence")));
+        sequence->setBoundSceneID(grpScene->id());
+        sequence->setDurationMode(Chaser::PerStep);
+        sequence->setDuration(m_matrix->duration());
+
         if (m_matrix->fadeInSpeed() != 0)
         {
-            chaser->setFadeInMode(Chaser::PerStep);
-            chaser->setFadeInSpeed(m_matrix->fadeInSpeed());
+            sequence->setFadeInMode(Chaser::PerStep);
+            sequence->setFadeInSpeed(m_matrix->fadeInSpeed());
         }
         if (m_matrix->fadeOutSpeed() != 0)
         {
-            chaser->setFadeOutMode(Chaser::PerStep);
-            chaser->setFadeOutSpeed(m_matrix->fadeOutSpeed());
+            sequence->setFadeOutMode(Chaser::PerStep);
+            sequence->setFadeOutSpeed(m_matrix->fadeOutSpeed());
         }
 
         for (int i = 0; i < totalSteps; i++)
@@ -1043,12 +1045,14 @@ void RGBMatrixEditor::slotSaveToSequenceClicked()
             {
                 for (int x = 0; x < map[y].size(); x++)
                 {
-                    QColor rgb = QColor(map[y][x]);
+                    uint col = map[y][x];
+                    QColor rgb = QColor(col);
                     GroupHead head = grp->head(QLCPoint(x, y));
 
                     Fixture *fxi = m_doc->fixture(head.fxi);
                     if (fxi == NULL)
                         continue;
+
                     QVector <quint32> rgbCh = fxi->rgbChannels(head.head);
                     if (rgbCh.count() == 3)
                     {
@@ -1059,14 +1063,14 @@ void RGBMatrixEditor::slotSaveToSequenceClicked()
 
                     quint32 master = fxi->channelNumber(QLCChannel::Intensity, QLCChannel::MSB, head.head);
                     if (master != QLCChannel::invalid())
-                        step.values.append(SceneValue(head.fxi, master, 255));
+                        step.values.append(SceneValue(head.fxi, master, col == 0 ? 0 : 255));
                 }
             }
             // !! Important !! matrix's heads can be displaced randomly but in a sequence
             // we absolutely need ordered values. So do it now !
             qSort(step.values.begin(), step.values.end());
 
-            chaser->addStep(step);
+            sequence->addStep(step);
             currentStep += increment;
             if (currentStep == totalSteps && m_matrix->runOrder() == RGBMatrix::PingPong)
             {
@@ -1076,7 +1080,7 @@ void RGBMatrixEditor::slotSaveToSequenceClicked()
             m_previewHandler->updateStepColor(currentStep, m_matrix->startColor(), m_matrix->stepsCount());
         }
 
-        m_doc->addFunction(chaser);
+        m_doc->addFunction(sequence);
 
         if (testRunning == true)
             m_testButton->click();

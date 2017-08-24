@@ -22,7 +22,7 @@ import QtQuick.Layouts 1.1
 import QtQuick.Dialogs 1.1
 import QtQuick.Controls 1.2
 
-import com.qlcplus.classes 1.0
+import org.qlcplus.classes 1.0
 import "."
 
 Rectangle
@@ -62,7 +62,7 @@ Rectangle
         x: vcRightPanel.x - width
         y: 100
         visible: false
-        selectedColor: wObj ? wObj.backgroundColor : "black"
+        currentRGB: wObj ? wObj.backgroundColor : "black"
 
         onColorChanged:
         {
@@ -80,7 +80,7 @@ Rectangle
         x: vcRightPanel.x - width
         y: 100
         visible: false
-        selectedColor: wObj ? wObj.foregroundColor : "black"
+        currentRGB: wObj ? wObj.foregroundColor : "black"
 
         onColorChanged:
         {
@@ -176,7 +176,10 @@ Rectangle
 
                             onTextChanged:
                             {
-                                if(wObj && selectedWidgetsCount < 2)
+                                if (!wObj)
+                                    return
+
+                                if (selectedWidgetsCount < 2)
                                     wObj.caption = text
                                 else
                                     virtualConsole.setWidgetsCaption(text)

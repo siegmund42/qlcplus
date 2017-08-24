@@ -26,6 +26,10 @@
 #include <Qt3DCore/QEntity>
 #include <Qt3DCore/QTransform>
 #include <Qt3DRender/QSceneLoader>
+#include <Qt3DRender/QMaterial>
+#include <Qt3DRender/QLayer>
+#include <Qt3DRender/QEffect>
+#include <Qt3DRender/QGeometryRenderer>
 
 #include "previewcontext.h"
 
@@ -34,6 +38,13 @@ class Fixture;
 class MonitorProperties;
 
 using namespace Qt3DCore;
+using namespace Qt3DRender;
+
+typedef struct
+{
+    QVector3D m_extents;
+    QVector3D m_center;
+} BoundingVolume;
 
 typedef struct
 {
@@ -45,12 +56,22 @@ typedef struct
     QEntity *m_armItem;
     /** Reference to the head entity used by moving heads */
     QEntity *m_headItem;
+    /** The attached light index */
+    unsigned int m_lightIndex;
+    /** The bounding volume information */
+    BoundingVolume m_selectionBox;
 
 } FixtureMesh;
 
 class MainView3D : public PreviewContext
 {
     Q_OBJECT
+
+    Q_PROPERTY(QString meshDirectory READ meshDirectory CONSTANT)
+    Q_PROPERTY(QVector3D stageSize READ stageSize WRITE setStageSize NOTIFY stageSizeChanged)
+    Q_PROPERTY(QStringList stagesList READ stagesList CONSTANT)
+    Q_PROPERTY(int stageIndex READ stageIndex WRITE setStageIndex NOTIFY stageIndexChanged)
+    Q_PROPERTY(float ambientIntensity READ ambientIntensity WRITE setAmbientIntensity NOTIFY ambientIntensityChanged)
 
 public:
     explicit MainView3D(QQuickView *view, Doc *doc, QObject *parent = 0);
@@ -64,7 +85,33 @@ public:
 
     void resetItems();
 
+protected:
+    /** Returns a string with the mesh location, suitable to be used by QML */
+    QString meshDirectory() const;
+
+protected slots:
+    /** @reimp */
+    void slotRefreshView();
+
+private:
+    /** Reference to the Doc Monitor properties */
+    MonitorProperties *m_monProps;
+
+    /** Pre-cached QML component for quick item creation */
+    QQmlComponent *m_fixtureComponent;
+
+    /*********************************************************************
+     * Fixtures
+     *********************************************************************/
+public:
+    Q_INVOKABLE void sceneReady();
+    Q_INVOKABLE void quadReady();
+    Q_INVOKABLE void resetStage(QEntity *entity);
+
     void createFixtureItem(quint32 fxID, qreal x, qreal y, qreal z, bool mmCoords = true);
+
+    Q_INVOKABLE void initializeFixture(quint32 fxID, QEntity *fxEntity, QComponent *picker,
+                                       QSceneLoader *loader, QLayer *layer, QEffect *effect);
 
     void updateFixture(Fixture *fixture);
 
@@ -76,34 +123,81 @@ public:
 
     void updateFixtureRotation(quint32 fxID, QVector3D degrees);
 
-    Q_INVOKABLE void createView();
-    Q_INVOKABLE void initializeFixture(quint32 fxID, QComponent *picker, Qt3DRender::QSceneLoader *loader);
-
 protected:
     /** First time 3D view variables initializations */
     void initialize3DProperties();
 
+    /** Bounding box volume calculation methods */
+    void calculateMeshExtents(QGeometryRenderer *mesh, QVector3D &meshExtents, QVector3D &meshCenter);
+    void addVolumes(FixtureMesh *meshRef, QVector3D center, QVector3D extent);
+
+    /** Recursive method to get/set all the information of a scene */
+    QEntity *inspectEntity(QEntity *entity, FixtureMesh *meshRef,
+                           QLayer *layer, QEffect *effect,
+                           bool calculateVolume, QVector3D translation);
+
 private:
     Qt3DCore::QTransform *getTransform(QEntity *entity);
+    QMaterial *getMaterial(QEntity *entity);
+    unsigned int getNewLightIndex();
+    void updateLightPosition(FixtureMesh *meshRef);
 
 protected slots:
-    /** @reimp */
-    void slotRefreshView();
+    /** Helper method to create fixtures in the event loop thread */
+    void slotCreateFixture(quint32 fxID);
 
 private:
-    MonitorProperties *m_monProps;
-
-    /** Pre-cached QML component for quick item creation */
-    QQmlComponent *fixtureComponent;
-
     /** Reference to the Scene3D component */
     QQuickItem *m_scene3D;
 
-    /** Reference to the scene3D root entity for items creation */
-    QEntity *m_rootEntity;
+    /** Reference to the scene root entity for items creation */
+    QEntity *m_sceneRootEntity;
+
+    /** Reference to the light pass entity and material for uniform updates */
+    QEntity *m_quadEntity;
+    QMaterial *m_quadMaterial;
 
     /** Map of QLC+ fixture IDs and QML Entity items */
     QMap<quint32, FixtureMesh*> m_entitiesMap;
+
+    /** Cache of the loaded models against bounding volumes */
+    QMap<QUrl, BoundingVolume> m_boundingVolumesMap;
+
+    /*********************************************************************
+     * Environment
+     *********************************************************************/
+public:
+    /** Get/Set the environment stage size */
+    QVector3D stageSize() const;
+    void setStageSize(QVector3D stageSize);
+
+    /** The list of currently supported stage types */
+    QStringList stagesList() const;
+
+    /** Get/Set the stage QML resource index to be loaded at runtime */
+    int stageIndex() const;
+    void setStageIndex(int stageIndex);
+
+    /** Get/Set the ambient light intensity */
+    float ambientIntensity() const;
+    void setAmbientIntensity(float ambientIntensity);
+
+signals:
+    void stageSizeChanged(QVector3D stageSize);
+    void stageIndexChanged(int stageIndex);
+    void ambientIntensityChanged(qreal ambientIntensity);
+
+private:
+    QVector3D m_stageSize;
+    QStringList m_stagesList;
+    QStringList m_stageResourceList;
+    int m_stageIndex;
+
+    /** Reference to the selected stage Entity */
+    QEntity *m_stageEntity;
+
+    /** Ambient light amount (0.0 - 1.0) */
+    float m_ambientIntensity;
 };
 
 #endif // MAINVIEW3D_H

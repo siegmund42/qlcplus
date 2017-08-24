@@ -51,8 +51,6 @@ class QHttpRequest : public QObject
     Q_PROPERTY(QString path READ path)
     Q_PROPERTY(QString httpVersion READ httpVersion)
 
-    Q_ENUMS(HttpMethod)
-
     /// @cond nodoc
     friend class QHttpConnection;
     /// @endcond
@@ -95,6 +93,9 @@ public:
         HTTP_PATCH,
         HTTP_PURGE
     };
+#if QT_VERSION >= 0x050500
+    Q_ENUM(HttpMethod)
+#endif
 
     /// The method used for the request.
     HttpMethod method() const;
@@ -128,7 +129,7 @@ public:
     /** Headers are stored as lowercase so the input @c field will be lowercased.
         @param field Name of the header field
         @return Value of the header or empty string if not found. */
-    QString header(const QString &field);
+    QString header(const QString &field) const;
 
     /// IP Address of the client in dotted decimal format.
     const QString &remoteAddress() const;

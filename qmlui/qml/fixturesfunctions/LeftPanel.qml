@@ -19,7 +19,7 @@
 
 import QtQuick 2.0
 import QtQuick.Layouts 1.0
-import QtQuick.Controls 1.0
+import QtQuick.Controls 2.2
 
 import "."
 
@@ -39,14 +39,14 @@ SidePanel
         color: "transparent"
         z: 2
 
-        ExclusiveGroup { id: fxManagerGroup }
-        ExclusiveGroup { id: capabilitiesGroup }
+        ButtonGroup { id: fxManagerGroup }
+        ButtonGroup { id: capabilitiesGroup }
 
         ColumnLayout
         {
             anchors.horizontalCenter: parent.horizontalCenter
             height: parent.height
-            //anchors.leftMargin: 1
+            width: iconSize
             spacing: 3
 
             IconButton
@@ -58,7 +58,8 @@ SidePanel
                 imgSource: "qrc:/fixture.svg"
                 checkable: true
                 tooltip: qsTr("Add Fixtures")
-                exclusiveGroup: fxManagerGroup
+                ButtonGroup.group: fxManagerGroup
+                autoExclusive: false
                 onToggled:
                 {
                     if (checked == true)
@@ -76,7 +77,8 @@ SidePanel
                 imgSource: "qrc:/group.svg"
                 checkable: true
                 tooltip: qsTr("Fixture Groups")
-                exclusiveGroup: fxManagerGroup
+                ButtonGroup.group: fxManagerGroup
+                autoExclusive: false
                 onToggled:
                 {
                     if (checked == true)
@@ -95,15 +97,16 @@ SidePanel
                 checkable: true
                 tooltip: qsTr("Intensity")
                 counter: 0
-                exclusiveGroup: capabilitiesGroup
+                ButtonGroup.group: capabilitiesGroup
                 onCheckedChanged: intTool.visible = !intTool.visible
                 onCounterChanged: if (counter == 0) intTool.visible = false
+
                 IntensityTool
                 {
                     id: intTool
                     parent: mainView
                     x: leftSidePanel.width
-                    y: mainToolbar.height + 40
+                    y: UISettings.bigItemHeight
                     visible: false
                 }
             }
@@ -118,19 +121,20 @@ SidePanel
                 checkable: true
                 tooltip: qsTr("Color")
                 counter: 0
-                exclusiveGroup: capabilitiesGroup
+                ButtonGroup.group: capabilitiesGroup
                 onCheckedChanged: colTool.visible = !colTool.visible
                 onCounterChanged: if (counter == 0) colTool.visible = false
+
                 ColorTool
                 {
                     id: colTool
                     parent: mainView
                     x: leftSidePanel.width
-                    y: mainToolbar.height + 40
+                    y: UISettings.bigItemHeight
                     visible: false
                     colorsMask: fixtureManager.colorsMask
 
-                    onColorChanged: fixtureManager.setColorValue(r * 255, g * 255, b * 255, w, a, uv)
+                    onColorChanged: fixtureManager.setColorValue(r * 255, g * 255, b * 255, w * 255, a * 255, uv * 255)
                 }
             }
 
@@ -145,7 +149,7 @@ SidePanel
                 checkable: true
                 tooltip: qsTr("Position")
                 counter: 0
-                exclusiveGroup: capabilitiesGroup
+                ButtonGroup.group: capabilitiesGroup
                 onCheckedChanged: posTool.visible = !posTool.visible
                 onCounterChanged: if (counter == 0) posTool.visible = false
 
@@ -157,10 +161,36 @@ SidePanel
                     id: posTool
                     parent: mainView
                     x: leftSidePanel.width
-                    y: mainToolbar.height + 40
+                    y: UISettings.bigItemHeight
                     visible: false
                     panMaxDegrees: posToolButton.panDegrees
                     tiltMaxDegrees: posToolButton.tiltDegrees
+                }
+            }
+
+            IconButton
+            {
+                objectName: "capShutter"
+                z: 2
+                width: iconSize
+                height: iconSize
+                imgSource: "qrc:/shutter.svg"
+                checkable: true
+                tooltip: qsTr("Shutter")
+                counter: 0
+                ButtonGroup.group: capabilitiesGroup
+
+                onCheckedChanged: cShutterTool.visible = !cShutterTool.visible
+                onCounterChanged: if (counter == 0) cShutterTool.visible = false
+
+                PresetsTool
+                {
+                    id: cShutterTool
+                    parent: mainView
+                    x: leftSidePanel.width
+                    y: UISettings.bigItemHeight
+                    visible: false
+                    onVisibleChanged: if (visible) updatePresets(fixtureManager.shutterChannels)
                 }
             }
 
@@ -174,7 +204,7 @@ SidePanel
                 checkable: true
                 tooltip: qsTr("Color Wheel")
                 counter: 0
-                exclusiveGroup: capabilitiesGroup
+                ButtonGroup.group: capabilitiesGroup
 
                 onCheckedChanged: cWheelTool.visible = !cWheelTool.visible
                 onCounterChanged: if (counter == 0) cWheelTool.visible = false
@@ -184,8 +214,9 @@ SidePanel
                     id: cWheelTool
                     parent: mainView
                     x: leftSidePanel.width
-                    y: mainToolbar.height + 40
+                    y: UISettings.bigItemHeight
                     visible: false
+                    onVisibleChanged: if (visible) updatePresets(fixtureManager.colorWheelChannels)
                 }
             }
 
@@ -199,18 +230,19 @@ SidePanel
                 checkable: true
                 tooltip: qsTr("Gobos")
                 counter: 0
-                exclusiveGroup: capabilitiesGroup
+                ButtonGroup.group: capabilitiesGroup
 
                 onCheckedChanged: gobosTool.visible = !gobosTool.visible
                 onCounterChanged: if (counter == 0) gobosTool.visible = false
+
                 PresetsTool
                 {
                     id: gobosTool
                     parent: mainView
                     x: leftSidePanel.width
-                    y: mainToolbar.height + 40
+                    y: UISettings.bigItemHeight
                     visible: false
-                    goboPresets: true
+                    onVisibleChanged: if (visible) updatePresets(fixtureManager.goboChannels)
                 }
             }
 

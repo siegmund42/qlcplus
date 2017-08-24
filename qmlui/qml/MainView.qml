@@ -19,9 +19,7 @@
 
 import QtQuick 2.2
 import QtQuick.Layouts 1.1
-import QtQuick.Controls 1.2
-
-import QtQuick.Window 2.0
+import QtQuick.Controls 2.1
 
 import "."
 
@@ -65,7 +63,13 @@ Rectangle
 
         enableContext(ctx, true)
         currentContext = ctx
-        mainViewLoader.source = qmlRes
+        if (qmlRes)
+            mainViewLoader.source = qmlRes
+    }
+
+    function setDimScreen(enable)
+    {
+        dimScreen.visible = enable
     }
 
     FontLoader
@@ -91,32 +95,40 @@ Rectangle
             GradientStop { position: 1; color: UISettings.toolbarEnd }
         }
 
-        Component.onCompleted:
-        {
-            console.log("density: " + Screen.pixelDensity + ", ratio: " + Screen.devicePixelRatio)
-        }
-
         RowLayout
         {
             spacing: 5
             anchors.fill: parent
 
-            ExclusiveGroup { id: menuBarGroup }
+            ButtonGroup { id: menuBarGroup }
+
             MenuBarEntry
             {
                 id: actEntry
                 imgSource: "qrc:/qlcplus.svg"
                 entryText: qsTr("Actions")
                 onClicked: actionsMenu.visible = true
+                autoExclusive: false
+                checkable: false
+
+                Image
+                {
+                    visible: qlcplus.docModified
+                    source: "qrc:/filesave.svg"
+                    x: 1
+                    y: parent.height - height - 1
+                    height: parent.height / 3
+                    width: height
+                    sourceSize: Qt.size(width, height)
+                }
             }
             MenuBarEntry
             {
                 id: edEntry
                 imgSource: "qrc:/editor.svg"
                 entryText: qsTr("Fixtures & Functions")
-                checkable: true
                 checked: true
-                exclusiveGroup: menuBarGroup
+                ButtonGroup.group: menuBarGroup
                 onCheckedChanged:
                 {
                     if (checked == true)
@@ -128,8 +140,7 @@ Rectangle
                 id: vcEntry
                 imgSource: "qrc:/virtualconsole.svg"
                 entryText: qsTr("Virtual Console")
-                checkable: true
-                exclusiveGroup: menuBarGroup
+                ButtonGroup.group: menuBarGroup
                 onCheckedChanged:
                 {
                     if (checked == true)
@@ -146,8 +157,7 @@ Rectangle
                 id: sdEntry
                 imgSource: "qrc:/simpledesk.svg"
                 entryText: qsTr("Simple Desk")
-                checkable: true
-                exclusiveGroup: menuBarGroup
+                ButtonGroup.group: menuBarGroup
                 onCheckedChanged:
                 {
                     if (checked == true)
@@ -164,8 +174,7 @@ Rectangle
                 id: smEntry
                 imgSource: "qrc:/showmanager.svg"
                 entryText: qsTr("Show Manager")
-                checkable: true
-                exclusiveGroup: menuBarGroup
+                ButtonGroup.group: menuBarGroup
                 onCheckedChanged:
                 {
                     if (checked == true)
@@ -182,8 +191,7 @@ Rectangle
                 id: ioEntry
                 imgSource: "qrc:/inputoutput.svg"
                 entryText: qsTr("Input/Output")
-                checkable: true
-                exclusiveGroup: menuBarGroup
+                ButtonGroup.group: menuBarGroup
                 onCheckedChanged:
                 {
                     if (checked == true)
@@ -199,6 +207,7 @@ Rectangle
             {
                 // acts like an horizontal spacer
                 Layout.fillWidth: true
+                height: parent.height
                 color: "transparent"
             }
             RobotoText
@@ -265,19 +274,6 @@ Rectangle
         z: visible ? 99 : 0
     }
 
-    /** Mouse area enabled when actionsMenu is visible
-     *  It fills the whole application window to grab
-     *  a click outside the menu and close it
-     */
-    MouseArea
-    {
-        id: contextMenuArea
-        z: actionsMenu.visible ? 98 : 0
-        enabled: actionsMenu.visible
-        anchors.fill: parent
-        onClicked: actionsMenu.visible = false
-    }
-
     Rectangle
     {
         id: mainViewArea
@@ -293,8 +289,15 @@ Rectangle
             source: "qrc:/FixturesAndFunctions.qml"
         }
     }
-    PopupBox
+
+    /* Rectangle covering the whole window to
+     * have a dimmered background for popups */
+    Rectangle
     {
+        id: dimScreen
         anchors.fill: parent
+        visible: false
+        z: 99
+        color: Qt.rgba(0, 0, 0, 0.5)
     }
 }

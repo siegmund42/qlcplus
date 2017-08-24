@@ -21,7 +21,7 @@ import QtQuick 2.0
 import QtQuick.Layouts 1.2
 import QtQuick.Dialogs 1.1
 
-import com.qlcplus.classes 1.0
+import org.qlcplus.classes 1.0
 
 import "TimeUtils.js" as TimeUtils
 import "."
@@ -57,57 +57,16 @@ Rectangle
         }
     }
 
-    Rectangle
+    EditorTopBar
     {
         id: topBar
-        color: UISettings.bgMedium
-        width: rgbmeContainer.width
-        height: UISettings.iconSizeMedium
-        z: 2
+        text: rgbMatrixEditor.functionName
+        onTextChanged: rgbMatrixEditor.functionName = text
 
-        Rectangle
+        onBackClicked:
         {
-            id: backBox
-            width: UISettings.iconSizeMedium
-            height: width
-            color: "transparent"
-
-            Image
-            {
-                id: leftArrow
-                anchors.fill: parent
-                rotation: 180
-                source: "qrc:/arrow-right.svg"
-                sourceSize: Qt.size(width, height)
-            }
-            MouseArea
-            {
-                anchors.fill: parent
-                hoverEnabled: true
-                onEntered: backBox.color = "#666"
-                onExited: backBox.color = "transparent"
-                onClicked:
-                {
-                    functionManager.setEditorFunction(-1, false)
-                    requestView(-1, "qrc:/FunctionManager.qml")
-                }
-            }
-        }
-        TextInput
-        {
-            id: cNameEdit
-            x: leftArrow.width + 5
-            height: UISettings.iconSizeMedium
-            width: topBar.width - x
-            color: UISettings.fgMain
-            clip: true
-            text: rgbMatrixEditor.functionName
-            verticalAlignment: TextInput.AlignVCenter
-            font.family: UISettings.robotoFontName
-            font.pixelSize: UISettings.textSizeDefault
-            selectByMouse: true
-            Layout.fillWidth: true
-            onTextChanged: rgbMatrixEditor.functionName = text
+            functionManager.setEditorFunction(-1, false)
+            requestView(-1, "qrc:/FunctionManager.qml")
         }
     }
 
@@ -160,7 +119,7 @@ Rectangle
                 {
                     Layout.fillWidth: true
                     height: editorColumn.itemsHeight
-                    model: fixtureManager.groupsListModel
+                    model: fixtureGroupEditor.groupsListModel
                     currentValue: rgbMatrixEditor.fixtureGroup
                     onValueChanged: rgbMatrixEditor.fixtureGroup = value
                 }
@@ -198,7 +157,7 @@ Rectangle
                     height: editorColumn.itemsHeight
                     model: rgbMatrixEditor.algorithms
                     currentIndex: rgbMatrixEditor.algorithmIndex
-                    onCurrentTextChanged:
+                    onCurrentIndexChanged:
                     {
                         rgbMatrixEditor.algorithmIndex = currentIndex
                         paramSection.sectionContents = null
@@ -292,7 +251,7 @@ Rectangle
                         y: rightSidePanel.y
                         visible: false
                         closeOnSelect: true
-                        selectedColor: rgbMatrixEditor.startColor
+                        currentRGB: rgbMatrixEditor.startColor
 
                         onColorChanged:
                         {
@@ -328,7 +287,7 @@ Rectangle
                         y: rightSidePanel.y
                         visible: false
                         closeOnSelect: true
-                        selectedColor: rgbMatrixEditor.endColor
+                        currentRGB: rgbMatrixEditor.endColor
 
                         onColorChanged: rgbMatrixEditor.endColor = Qt.rgba(r, g, b, 1.0)
                     }

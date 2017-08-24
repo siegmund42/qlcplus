@@ -19,7 +19,7 @@
 
 import QtQuick 2.0
 
-import com.qlcplus.classes 1.0
+import org.qlcplus.classes 1.0
 import "."
 
 Rectangle
@@ -55,10 +55,10 @@ Rectangle
         {
             id: chCheckBox
             visible: isCheckable
-            height: UISettings.listItemHeight
+            implicitWidth: UISettings.listItemHeight
+            implicitHeight: implicitWidth
             checked: isChecked
-            width: height
-            onToggle: chDelegate.mouseEvent(App.Checked, chIndex, checked, chDelegate, 0)
+            onCheckedChanged: chDelegate.mouseEvent(App.Checked, chIndex, checked, chDelegate, 0)
         }
 
         IconTextEntry
@@ -66,7 +66,7 @@ Rectangle
             id: chEntry
             height: UISettings.listItemHeight
             width: chDelegate.width - chCheckBox.width
-            tLabel: textLabel
+            tLabel: "" + (chIndex + 1) + ": " + textLabel
             iSrc: itemIcon
 
             MouseArea

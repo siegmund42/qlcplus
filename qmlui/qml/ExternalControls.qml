@@ -20,7 +20,7 @@
 import QtQuick 2.0
 import QtQuick.Layouts 1.1
 
-import com.qlcplus.classes 1.0
+import org.qlcplus.classes 1.0
 import "."
 
 Column
@@ -112,6 +112,8 @@ Column
                 {
                     item.dObjRef = objRef
                     item.controlID = modelData.id
+                    item.controlIndex = modelData.cIndex
+
                     if (modelData.invalid)
                         item.invalid = modelData.invalid
 

@@ -27,6 +27,7 @@
 #include <QMutex>
 #include <QList>
 #include <QIcon>
+#include <QMap>
 
 #include "universe.h"
 #include "functionparent.h"
@@ -50,6 +51,7 @@ class FunctionUiState;
 #define KXMLQLCFunctionType "Type"
 #define KXMLQLCFunctionData "Data"
 #define KXMLQLCFunctionPath "Path"
+#define KXMLQLCFunctionHidden "Hidden"
 #define KXMLQLCFunctionBlendMode "BlendMode"
 
 #define KXMLQLCFunctionValue "Value"
@@ -72,9 +74,20 @@ class FunctionUiState;
 
 typedef struct
 {
-    QString name;
-    qreal value;
+    QString m_name;
+    qreal m_value;
+    qreal m_min;
+    qreal m_max;
+    int m_flags;
+    bool m_isOverridden;
+    qreal m_overrideValue;
 } Attribute;
+
+typedef struct
+{
+    int m_attrIndex;
+    qreal m_value;
+} AttributeOverride;
 
 class Function : public QObject
 {
@@ -93,20 +106,23 @@ public:
      */
     enum Type
     {
-        Undefined  = 0,
-        Scene      = 1 << 0,
-        Chaser     = 1 << 1,
-        EFX        = 1 << 2,
-        Collection = 1 << 3,
-        Script     = 1 << 4,
-        RGBMatrix  = 1 << 5,
-        Show       = 1 << 6,
-        Audio      = 1 << 7
+        Undefined      = 0,
+        SceneType      = 1 << 0,
+        ChaserType     = 1 << 1,
+        EFXType        = 1 << 2,
+        CollectionType = 1 << 3,
+        ScriptType     = 1 << 4,
+        RGBMatrixType  = 1 << 5,
+        ShowType       = 1 << 6,
+        SequenceType   = 1 << 7,
+        AudioType      = 1 << 8
 #if QT_VERSION >= 0x050000
-        , Video    = 1 << 8
+        , VideoType    = 1 << 9
 #endif
     };
-    Q_ENUMS(Type)
+#if QT_VERSION >= 0x050500
+    Q_ENUM(Type)
+#endif
 
     /**
      * Common attributes
@@ -246,7 +262,7 @@ public:
       * Subclasses should reimplement this */
     virtual QIcon getIcon() const;
 
-private:
+protected:
     Type m_type;
 
     /*********************************************************************
@@ -263,6 +279,19 @@ private:
     QString m_path;
 
     /*********************************************************************
+     * Visibility
+     *********************************************************************/
+public:
+    /** Set the function visibility status. Hidden Functions will not be displayed in the UI */
+    void setVisible(bool visible);
+
+    /** Retrieve the current visibility status */
+    bool isVisible() const;
+
+private:
+    bool m_visible;
+
+    /*********************************************************************
      * Common XML
      *********************************************************************/
 protected:
@@ -274,7 +303,9 @@ protected:
      *********************************************************************/
 public:
     enum RunOrder { Loop = 0, SingleShot, PingPong, Random };
-    Q_ENUMS(RunOrder)
+#if QT_VERSION >= 0x050500
+    Q_ENUM(RunOrder)
+#endif
 
 public:
     /**
@@ -318,7 +349,9 @@ private:
      *********************************************************************/
 public:
     enum Direction { Forward = 0, Backward };
-    Q_ENUMS(Direction)
+#if QT_VERSION >= 0x050500
+    Q_ENUM(Direction)
+#endif
 
 public:
     /**
@@ -362,10 +395,11 @@ private:
      *********************************************************************/
 public:
     enum TempoType { Original = -1, Time = 0, Beats = 1 };
-    Q_ENUMS(TempoType)
-
     enum FractionsType { NoFractions = 0, ByTwoFractions, AllFractions };
-    Q_ENUMS(FractionsType)
+#if QT_VERSION >= 0x050500
+    Q_ENUM(TempoType)
+    Q_ENUM(FractionsType)
+#endif
 
 public:
     /**
@@ -426,7 +460,9 @@ private:
      *********************************************************************/
 public:
     enum SpeedType { FadeIn = 0, Hold, FadeOut, Duration };
-    Q_ENUMS(SpeedType)
+#if QT_VERSION >= 0x050500
+    Q_ENUM(SpeedType)
+#endif
 
 public:
     /** Set the fade in time in milliseconds */
@@ -515,14 +551,18 @@ private:
      * UI State
      *********************************************************************/
 public:
-    FunctionUiState * uiState();
-    const FunctionUiState * uiState() const;
+    /** Get/Set a generic UI property specific to this Function */
+    QVariant uiStateValue(QString property);
+    void setUiStateValue(QString property, QVariant value);
+
+    /** Get the whole UI state map */
+    QMap<QString, QVariant> uiStateMap() const;
 
 private:
-    virtual FunctionUiState * createUiState();
-
-private:
-    FunctionUiState * m_uiState;
+    /** A generic map to temporary store key/value
+     *  pairs that the UI can use to remember how an editor
+     *  was configured. Note: this is not saved into XML */
+    QMap<QString, QVariant> m_uiState;
 
     /*********************************************************************
      * Fixtures
@@ -566,6 +606,12 @@ public:
      * implementation does nothing.
      */
     virtual void postLoad();
+
+    /**
+     * Check if a Function ID is included/controlled by this Function.
+     * Subclasses should reimplement this.
+     */
+    virtual bool contains(quint32 functionId);
 
     /*********************************************************************
      * Flash
@@ -782,14 +828,44 @@ private:
      * Attributes
      *************************************************************************/
 public:
+    enum OverrideFlags
+    {
+        Multiply = (1 << 0), /** The original attribute value should be multiplied by the overridden values */
+        LastWins = (1 << 1), /** The original attribute value is overridden by the last requested override value */
+        Single   = (1 << 2)  /** Only one attribute override ID will be allowed */
+    };
+
+    static int invalidAttributeId();
+
     /**
      * Register a new attribute for this function.
      * If the attribute already exists, it will be overwritten.
      *
      * @param name The attribute name
+     * @param min The attribute minimum value
+     * @param max The attribute maximum value
      * @param value The attribute initial value
      */
-    int registerAttribute(QString name, qreal value = 1.0);
+    int registerAttribute(QString name, int flags = Multiply, qreal min = 0.0, qreal max = 1.0, qreal value = 1.0);
+
+    /**
+     * Request a new attribute override ID. A Function will always return a new ID,
+     * that the caller can use in the adjustAttribute method.
+     *
+     * @param attributeIndex the attribute index that will be overridden by the caller
+     * @param value an initial override value
+     *
+     * @return an override ID to be used to adjust the overridden value,
+     *         or -1 if the specified $attributeIndex is not valid
+     */
+    int requestAttributeOverride(int attributeIndex, qreal value = 1.0);
+
+    /**
+     * Release an attribute override no longer needed
+     *
+     * @param attributeId and ID previously acquired with requestAttributeOverride
+     */
+    void releaseAttributeOverride(int attributeId);
 
     /**
      * Unregister a previously created attribute for this function.
@@ -800,7 +876,7 @@ public:
     bool unregisterAttribute(QString name);
 
     /**
-     * Rename an existing atribute
+     * Rename an existing attribute
      *
      * @param idx the attribute index
      * @param newName the new name for the attribute
@@ -809,14 +885,25 @@ public:
     bool renameAttribute(int idx, QString newName);
 
     /**
-     * Adjust the intensity of the function by a fraction.
+     * Adjust an attribute value with the given new $value.
+     * If $attributeId is within the registered attributes range,
+     * the oiginal attribute value will be changed.
+     * Warning: only Function editors or the Function itself should do this !
+     * Otherwise, if $attributeId is >= OVERRIDE_ATTRIBUTE_START_ID
+     * it means the caller wants to control a value override.
+     * This operation will then recalculate the final override value
+     * according to the original attribute flags
      *
-     * @param fraction Intensity as a fraction (0.0 - 1.0)
+     * @param value the new attribute value
+     * @param attributeId the ID of the attribute to control
+     *
+     * @return the original attribute index or -1 on error
      */
-    virtual void adjustAttribute(qreal fraction, int attributeIndex);
+    virtual int adjustAttribute(qreal value, int attributeId);
 
     /**
-     * Reset intensity to the default value (1.0).
+     * Reset the overridden attributes, while keeping
+     * the original attribute values unchanged
      */
     void resetAttributes();
 
@@ -837,21 +924,33 @@ public:
     int getAttributeIndex(QString name) const;
 
     /**
-     * Get the function's attributes
+     * Get a list of the registered function's attributes
      *
      * @return a list of Attributes
      */
-    QList <Attribute> attributes();
+    QList <Attribute> attributes() const;
+
+protected:
+    /**
+     * Mark an attribute with the given $attributeIndex as overridden, and
+     * calculates the final override value according to the registered attribute flags
+     *
+     * @param attributeIndex the attribute index
+     */
+    void calculateOverrideValue(int attributeIndex);
 
 signals:
-    /** Informs that an attribute of the function has changed */
+    /** Notify the listeners that an attribute has changed */
     void attributeChanged(int index, qreal fraction);
 
 private:
+    /** A list of the registered attributes */
     QList <Attribute> m_attributes;
 
-public:
-    virtual bool contains(quint32 functionId);
+    /** A map of the overridden attributes */
+    QMap <int, AttributeOverride> m_overrideMap;
+
+    int m_lastOverrideAttributeId;
 
     /*************************************************************************
      * Blend mode

@@ -19,9 +19,9 @@
 
 import QtQuick 2.0
 import QtQuick.Layouts 1.1
-import QtQuick.Controls 1.2
+import QtQuick.Controls 2.1
 
-import com.qlcplus.classes 1.0
+import org.qlcplus.classes 1.0
 import "."
 
 Rectangle
@@ -61,6 +61,15 @@ Rectangle
         }
     }
 
+    function requestMatrixPopup(target, mparent, type, pos)
+    {
+        addMatrixPopup.targetFrame = target
+        addMatrixPopup.matrixParent = mparent
+        addMatrixPopup.wType = type
+        addMatrixPopup.wPos = pos
+        addMatrixPopup.open()
+    }
+
     VCRightPanel
     {
         id: vcRightPanel
@@ -95,7 +104,7 @@ Rectangle
                 id: rowLayout1
                 anchors.fill: parent
                 spacing: 5
-                ExclusiveGroup { id: vcToolbarGroup }
+                ButtonGroup { id: vcToolbarGroup }
 
                 Repeater
                 {
@@ -108,25 +117,19 @@ Rectangle
                             property string contextName: "PAGE-" + index
 
                             entryText: wObj ? wObj.caption : qsTr("Page " + index)
-                            checkable: true
-                            editable: true
+                            mFontSize: UISettings.textSizeDefault
+                            //editable: true
                             checked: index === virtualConsole.selectedPage ? true : false
                             checkedColor: UISettings.toolbarSelectionSub
                             bgGradient: vcTbGradient
-                            exclusiveGroup: vcToolbarGroup
+                            ButtonGroup.group: vcToolbarGroup
 
                             onCheckedChanged:
                             {
                                 if (wObj && checked == true)
                                 {
                                     if (wObj.requirePIN())
-                                    {
-                                        var page = [ index ]
-
-                                        actionManager.requestActionPopup(ActionManager.VCPagePINRequest,
-                                                                         "qrc:/PopupPINRequest.qml",
-                                                                         ActionManager.OK | ActionManager.Cancel, page)
-                                    }
+                                        pinRequestPopup.open()
                                     else
                                         virtualConsole.selectedPage = index
                                 }
@@ -140,6 +143,30 @@ Rectangle
                             {
                                 if (wObj)
                                     wObj.caption = text
+                            }
+
+                            PopupPINRequest
+                            {
+                                id: pinRequestPopup
+                                onAccepted:
+                                {
+                                    if (virtualConsole.validatePagePIN(index, currentPIN, sessionValidate) === true)
+                                    {
+                                        virtualConsole.selectedPage = index
+                                    }
+                                    else
+                                    {
+                                        pinErrorPopup.open()
+                                    }
+
+                                }
+                            }
+
+                            CustomPopupDialog
+                            {
+                                id: pinErrorPopup
+                                title: qsTr("Error")
+                                message: qsTr("Invalid PIN entered")
                             }
                         }
                 }
@@ -163,5 +190,95 @@ Rectangle
                 pageLoader.item.page = selectedPage
             }
         }
+    }
+
+    CustomPopupDialog
+    {
+        id: addMatrixPopup
+        z: 99
+
+        property var matrixParent: null
+        property VCFrame targetFrame: null
+        property string wType: ""
+        property point wPos
+
+        title: qsTr("Widget matrix setup")
+
+        contentItem:
+            GridLayout
+            {
+                width: parent.width
+                height: UISettings.iconSizeDefault * rows
+                columns: 4
+                rowSpacing: 5
+                columnSpacing: 5
+
+                // row 1
+                RobotoText  { label: qsTr("Columns") }
+                CustomSpinBox
+                {
+                    id: mxColumns
+                    from: 1
+                    to: 99
+                    value: 5
+                }
+
+                RobotoText  { label: qsTr("Rows") }
+                CustomSpinBox
+                {
+                    id: mxRows
+                    from: 1
+                    to: 99
+                }
+
+                // row 2
+                RobotoText  { label: qsTr("Width") }
+                CustomSpinBox
+                {
+                    id: wWidth
+                    from: 1
+                    to: 999
+                    suffix: "px"
+                    value: addMatrixPopup.wType === "buttonmatrix" ? screenPixelDensity * 17 : screenPixelDensity * 10
+                }
+
+                RobotoText  { label: qsTr("Height") }
+                CustomSpinBox
+                {
+                    id: wHeight
+                    from: 1
+                    to: 999
+                    suffix: "px"
+                    value: addMatrixPopup.wType === "buttonmatrix" ? screenPixelDensity * 17 : screenPixelDensity * 35
+                }
+
+                // row 3
+                Row
+                {
+                    Layout.columnSpan: 4
+                    Layout.fillWidth: true
+                    spacing: 10
+
+                    RobotoText  { label: qsTr("Frame type") }
+                    CustomCheckBox
+                    {
+                        id: normalFrameCheck
+                        height: UISettings.iconSizeMedium
+                        width: height
+                        checked: true
+                    }
+                    RobotoText  { label: qsTr("Normal") }
+                    CustomCheckBox
+                    {
+                        id: soloFrameCheck
+                        height: UISettings.iconSizeMedium
+                        width: height
+                    }
+                    RobotoText  { label: qsTr("Solo") }
+                }
+            }
+
+        onAccepted: targetFrame.addWidgetMatrix(matrixParent, wType, wPos, Qt.size(mxColumns.value, mxRows.value),
+                                                Qt.size(wWidth.value, wHeight.value), soloFrameCheck.checked)
     }
 }

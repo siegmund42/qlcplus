@@ -38,6 +38,7 @@ ShowFunction::ShowFunction(QObject *parent)
     m_duration = 0;
     m_color = QColor();
     m_locked = false;
+    m_intensityOverrideId = -1;
 }
 
 void ShowFunction::setFunctionID(quint32 id)
@@ -100,20 +101,20 @@ QColor ShowFunction::defaultColor(Function::Type type)
 {
     switch (type)
     {
-        case Function::Chaser:
+        case Function::ChaserType:
             return QColor(85, 107, 128);
         break;
-        case Function::Audio:
+        case Function::AudioType:
             return QColor(96, 128, 83);
         break;
-        case Function::RGBMatrix:
+        case Function::RGBMatrixType:
             return QColor(101, 155, 155);
         break;
-        case Function::EFX:
+        case Function::EFXType:
             return QColor(128, 60, 60);
         break;
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-        case Function::Video:
+        case Function::VideoType:
             return QColor(147, 140, 20);
         break;
 #endif
@@ -135,6 +136,16 @@ void ShowFunction::setLocked(bool locked)
 bool ShowFunction::isLocked() const
 {
     return m_locked;
+}
+
+int ShowFunction::intensityOverrideId() const
+{
+    return m_intensityOverrideId;
+}
+
+void ShowFunction::setIntensityOverrideId(int id)
+{
+    m_intensityOverrideId = id;
 }
 
 /************************************************************************

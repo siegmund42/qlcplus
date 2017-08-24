@@ -19,9 +19,9 @@
 
 import QtQuick 2.0
 import QtQuick.Layouts 1.1
-import QtQuick.Controls 1.2
+import QtQuick.Controls 2.1
 
-import com.qlcplus.classes 1.0
+import org.qlcplus.classes 1.0
 import "."
 
 Rectangle
@@ -60,8 +60,9 @@ Rectangle
 
                 CustomCheckBox
                 {
-                    width: UISettings.iconSizeMedium
-                    height: width
+                    implicitWidth: UISettings.iconSizeMedium
+                    implicitHeight: implicitWidth
+                    autoExclusive: false
                     checked: widgetRef ? widgetRef.showHeader : false
                     onCheckedChanged: if (widgetRef) widgetRef.showHeader = checked
                 }
@@ -76,8 +77,9 @@ Rectangle
 
                 CustomCheckBox
                 {
-                    width: UISettings.iconSizeMedium
-                    height: width
+                    implicitWidth: UISettings.iconSizeMedium
+                    implicitHeight: implicitWidth
+                    autoExclusive: false
                     checked: widgetRef ? widgetRef.showEnable : false
                     onCheckedChanged: if (widgetRef) widgetRef.showEnable = checked
                 }
@@ -106,8 +108,9 @@ Rectangle
 
                 CustomCheckBox
                 {
-                    width: UISettings.iconSizeMedium
-                    height: width
+                    implicitWidth: UISettings.iconSizeMedium
+                    implicitHeight: implicitWidth
+                    autoExclusive: false
                     checked: widgetRef ? widgetRef.multiPageMode : false
                     onCheckedChanged: if (widgetRef) widgetRef.multiPageMode = checked
                 }
@@ -122,10 +125,11 @@ Rectangle
 
                 CustomCheckBox
                 {
-                    width: UISettings.iconSizeMedium
-                    height: width
-                    //checked: widgetRef ? widgetRef.multiPageMode : false
-                    //onCheckedChanged: if (checked && widgetRef) widgetRef.multiPageMode = checked
+                    implicitWidth: UISettings.iconSizeMedium
+                    implicitHeight: implicitWidth
+                    autoExclusive: false
+                    checked: widgetRef ? widgetRef.pagesLoop : false
+                    onCheckedChanged: if (checked && widgetRef) widgetRef.pagesLoop = checked
                 }
 
                 // row 3
@@ -146,6 +150,8 @@ Rectangle
                         height: gridItemsHeight
                         from: 1
                         to: 100
+                        value: widgetRef ? widgetRef.totalPagesNumber : 1
+                        onValueChanged: if (widgetRef) widgetRef.totalPagesNumber = value
                     }
                 }
 

@@ -64,7 +64,7 @@ Rectangle
         //contentWidth: parent.width
         //contentHeight: parent.height
 
-        property size gridSize: View2D.gridSize
+        property vector3d gridSize: View2D.gridSize
         property real gridUnits: View2D.gridUnits
 
         Component.onCompleted:
@@ -81,8 +81,8 @@ Rectangle
             if (width <= 0 || height <= 0)
                 return;
             var w = twoDSettings.visible ? (width - twoDSettings.width) : width
-            var xDiv = w / gridSize.width
-            var yDiv = height / gridSize.height
+            var xDiv = w / gridSize.x
+            var yDiv = height / gridSize.z
             twoDContents.x = 0
             twoDContents.y = 0
 
@@ -93,8 +93,8 @@ Rectangle
 
             //console.log("Cell size calculated: " + View2D.cellPixels)
 
-            contentWidth = View2D.cellPixels * gridSize.width;
-            contentHeight = View2D.cellPixels * gridSize.height;
+            contentWidth = View2D.cellPixels * gridSize.x;
+            contentHeight = View2D.cellPixels * gridSize.z;
 
             if (contentWidth < w)
                 twoDContents.x = (w - contentWidth) / 2;
@@ -132,6 +132,7 @@ Rectangle
             z: 0
 
             antialiasing: true
+            contextType: "2d"
 
             property real cellSize: View2D.cellPixels
             property int gridUnits: twoDView.gridUnits
@@ -144,32 +145,30 @@ Rectangle
 
             onPaint:
             {
-                var ctx = twoDContents.getContext('2d');
+                context.globalAlpha = 1.0
+                context.strokeStyle = "#5F5F5F"
+                context.fillStyle = "black"
+                context.lineWidth = 1
 
-                ctx.globalAlpha = 1.0
-                ctx.strokeStyle = "#5F5F5F"
-                ctx.fillStyle = "black"
-                ctx.lineWidth = 1
+                context.beginPath()
+                context.clearRect(0, 0, width, height)
+                context.fillRect(0, 0, width, height)
+                context.rect(0, 0, width, height)
 
-                ctx.beginPath()
-                ctx.clearRect(0, 0, width, height)
-                ctx.fillRect(0, 0, width, height)
-                ctx.rect(0, 0, width, height)
-
-                for (var vl = 1; vl < twoDView.gridSize.width; vl++)
+                for (var vl = 1; vl < twoDView.gridSize.x; vl++)
                 {
                     var xPos = cellSize * vl
-                    ctx.moveTo(xPos, 0)
-                    ctx.lineTo(xPos, height)
+                    context.moveTo(xPos, 0)
+                    context.lineTo(xPos, height)
                 }
-                for (var hl = 1; hl < twoDView.gridSize.height; hl++)
+                for (var hl = 1; hl < twoDView.gridSize.z; hl++)
                 {
                     var yPos = cellSize * hl
-                    ctx.moveTo(0, yPos)
-                    ctx.lineTo(width, yPos)
+                    context.moveTo(0, yPos)
+                    context.lineTo(width, yPos)
                 }
-                ctx.closePath()
-                ctx.stroke()
+                context.closePath()
+                context.stroke()
             }
 
             MouseArea

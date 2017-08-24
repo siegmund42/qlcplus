@@ -19,7 +19,7 @@
 
 import QtQuick 2.2
 
-import com.qlcplus.classes 1.0
+import org.qlcplus.classes 1.0
 import "."
 
 Column
@@ -75,8 +75,9 @@ Column
             id: nodeIconImg
             visible: itemIcon == "" ? false : true
             width: visible ? parent.height : 0
-            height: parent.height
+            height: width
             source: itemIcon
+            sourceSize: Qt.size(width, height)
         }
 
         TextInput
@@ -84,7 +85,7 @@ Column
             property string originalText
 
             id: nodeLabel
-            x: nodeIconImg.width + 1
+            x: nodeIconImg.width + 2
             z: 0
             width: parent.width - nodeIconImg.width - 1
             height: UISettings.listItemHeight
@@ -193,21 +194,22 @@ Column
                         if (hasOwnProperty("type") && item.hasOwnProperty("itemType"))
                             item.itemType = type
 
+                        if (item.hasOwnProperty('itemIcon'))
+                            item.itemIcon = nodeContainer.itemIcon
+
+                        if (item.hasOwnProperty('cRef'))
+                            item.cRef = classRef
+
                         if (hasChildren)
                         {
                             item.nodePath = nodePath + "/" + path
                             item.isExpanded = isExpanded
                             item.nodeChildren = childrenModel
-                            if (item.hasOwnProperty('itemIcon'))
-                                item.itemIcon = nodeContainer.itemIcon
                             if (item.hasOwnProperty('childrenDelegate'))
                                 item.childrenDelegate = childrenDelegate
 
-                            console.log("Item path: " + item.nodePath + ", label: " + label)
+                            //console.log("Item path: " + item.nodePath + ", label: " + label)
                         }
-
-                        if (item.hasOwnProperty('cRef'))
-                            item.cRef = classRef
                     }
                     Connections
                     {

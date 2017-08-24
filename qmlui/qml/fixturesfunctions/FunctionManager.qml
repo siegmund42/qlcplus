@@ -19,9 +19,8 @@
 
 import QtQuick 2.0
 import QtQuick.Layouts 1.1
-import QtQuick.Controls 1.2
 
-import com.qlcplus.classes 1.0
+import org.qlcplus.classes 1.0
 import "."
 
 Rectangle
@@ -40,7 +39,7 @@ Rectangle
         functionManager.viewPosition = functionsListView.contentY
         var editorRes = functionManager.getEditorResource(funcType)
 
-        if (funcType === Function.Show)
+        if (funcType === Function.ShowType)
         {
             showManager.currentShowID = funcID
             mainView.switchToContext("SHOWMGR", editorRes)
@@ -78,126 +77,130 @@ Rectangle
         {
             id: topBarRowLayout
             width: parent.width
+            height: parent.height
             y: 1
 
             spacing: 4
 
             IconButton
             {
-                id: sceneFunc
                 z: 2
                 width: height
                 height: topBar.height - 2
                 imgSource: "qrc:/scene.svg"
                 checkable: true
-                checked: functionManager.functionsFilter & Function.Scene
+                checked: functionManager.functionsFilter & Function.SceneType
                 tooltip: qsTr("Scenes")
                 counter: functionManager.sceneCount
-                onCheckedChanged: setFunctionFilter(Function.Scene, checked)
+                onCheckedChanged: setFunctionFilter(Function.SceneType, checked)
             }
             IconButton
             {
-                id: chaserFunc
                 z: 2
                 width: height
                 height: topBar.height - 2
                 imgSource: "qrc:/chaser.svg"
                 checkable: true
-                checked: functionManager.functionsFilter & Function.Chaser
+                checked: functionManager.functionsFilter & Function.ChaserType
                 tooltip: qsTr("Chasers")
                 counter: functionManager.chaserCount
-                onCheckedChanged: setFunctionFilter(Function.Chaser, checked)
+                onCheckedChanged: setFunctionFilter(Function.ChaserType, checked)
             }
             IconButton
             {
-                id: efxFunc
+                z: 2
+                width: height
+                height: topBar.height - 2
+                imgSource: "qrc:/sequence.svg"
+                checkable: true
+                checked: functionManager.functionsFilter & Function.SequenceType
+                tooltip: qsTr("Sequences")
+                counter: functionManager.sequenceCount
+                onCheckedChanged: setFunctionFilter(Function.SequenceType, checked)
+            }
+            IconButton
+            {
                 z: 2
                 width: height
                 height: topBar.height - 2
                 imgSource: "qrc:/efx.svg"
                 checkable: true
-                checked: functionManager.functionsFilter & Function.EFX
+                checked: functionManager.functionsFilter & Function.EFXType
                 tooltip: qsTr("EFX")
                 counter: functionManager.efxCount
-                onCheckedChanged: setFunctionFilter(Function.EFX, checked)
+                onCheckedChanged: setFunctionFilter(Function.EFXType, checked)
             }
             IconButton
             {
-                id: collectionFunc
                 z: 2
                 width: height
                 height: topBar.height - 2
                 imgSource: "qrc:/collection.svg"
                 checkable: true
-                checked: functionManager.functionsFilter & Function.Collection
+                checked: functionManager.functionsFilter & Function.CollectionType
                 tooltip: qsTr("Collections")
                 counter: functionManager.collectionCount
-                onCheckedChanged: setFunctionFilter(Function.Collection, checked)
+                onCheckedChanged: setFunctionFilter(Function.CollectionType, checked)
             }
             IconButton
             {
-                id: rgbmFunc
                 z: 2
                 width: height
                 height: topBar.height - 2
                 imgSource: "qrc:/rgbmatrix.svg"
                 checkable: true
-                checked: functionManager.functionsFilter & Function.RGBMatrix
+                checked: functionManager.functionsFilter & Function.RGBMatrixType
                 tooltip: qsTr("RGB Matrices")
                 counter: functionManager.rgbMatrixCount
-                onCheckedChanged: setFunctionFilter(Function.RGBMatrix, checked)
+                onCheckedChanged: setFunctionFilter(Function.RGBMatrixType, checked)
             }
             IconButton
             {
-                id: showFunc
                 z: 2
                 width: height
                 height: topBar.height - 2
                 imgSource: "qrc:/showmanager.svg"
                 checkable: true
-                checked: functionManager.functionsFilter & Function.Show
+                checked: functionManager.functionsFilter & Function.ShowType
                 tooltip: qsTr("Shows")
                 counter: functionManager.showCount
-                onCheckedChanged: setFunctionFilter(Function.Show, checked)
+                onCheckedChanged: setFunctionFilter(Function.ShowType, checked)
             }
             IconButton
             {
-                id: scriptFunc
                 z: 2
                 width: height
                 height: topBar.height - 2
                 imgSource: "qrc:/script.svg"
                 checkable: true
-                checked: functionManager.functionsFilter & Function.Script
+                checked: functionManager.functionsFilter & Function.ScriptType
                 tooltip: qsTr("Scripts")
                 counter: functionManager.scriptCount
-                onCheckedChanged: setFunctionFilter(Function.Script, checked)
+                onCheckedChanged: setFunctionFilter(Function.ScriptType, checked)
             }
             IconButton
             {
-                id: audioFunc
                 z: 2
                 width: height
                 height: topBar.height - 2
                 imgSource: "qrc:/audio.svg"
                 checkable: true
-                checked: functionManager.functionsFilter & Function.Audio
+                checked: functionManager.functionsFilter & Function.AudioType
                 tooltip: qsTr("Audio")
                 counter: functionManager.audioCount
-                onCheckedChanged: setFunctionFilter(Function.Audio, checked)
+                onCheckedChanged: setFunctionFilter(Function.AudioType, checked)
             }
             IconButton
             {
-                id: videoFunc
                 z: 2
                 width: height
                 height: topBar.height - 2
                 imgSource: "qrc:/video.svg"
                 checkable: true
-                checked: functionManager.functionsFilter & Function.Video
+                checked: functionManager.functionsFilter & Function.VideoType
                 tooltip: qsTr("Videos")
                 counter: functionManager.videoCount
-                onCheckedChanged: setFunctionFilter(Function.Video, checked)
+                onCheckedChanged: setFunctionFilter(Function.VideoType, checked)
             }
 
             Rectangle { Layout.fillWidth: true }
@@ -240,7 +243,7 @@ Rectangle
               id: sTextInput
               y: 3
               height: parent.height - 6
-              width: searchBox.width
+              width: parent.width
               color: UISettings.fgMain
               text: functionManager.searchFilter
               font.family: "Roboto Condensed"
@@ -256,7 +259,7 @@ Rectangle
       {
           id: functionsListView
           width: fmContainer.width
-          height: fmContainer.height - topBar.height
+          height: fmContainer.height - topBar.height - (searchBox.visible ? searchBox.height : 0)
           //anchors.fill: parent
           z: 4
           boundsBehavior: Flickable.StopAtBounds
@@ -309,6 +312,7 @@ Rectangle
                                     fDragItem.parent = mainView
                                     fDragItem.x = posnInWindow.x - (fDragItem.width / 4)
                                     fDragItem.y = posnInWindow.y - (fDragItem.height / 4)
+                                    fDragItem.modifiers = mouseMods
                                 break;
                                 case App.Clicked:
                                     if (qItem == item)
