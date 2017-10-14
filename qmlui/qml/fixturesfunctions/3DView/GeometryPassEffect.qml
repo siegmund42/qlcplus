@@ -22,8 +22,8 @@ import Qt3D.Render 2.0
 
 Effect
 {
-    id : geometryPassEffect
-    techniques : [
+    id: geometryPassEffect
+    techniques: [
         // OpenGL 3.1
         Technique
         {
@@ -53,8 +53,8 @@ Effect
                             position0 = vec3(modelMatrix * vertexPosition);
                             normal0 = normalize(modelNormalMatrix * vertexNormal);
                             gl_Position = mvp * vertexPosition;
-                        }
-                    "
+                        }"
+
                     fragmentShaderCode:
                         "#version 140
 
@@ -71,8 +71,7 @@ Effect
                             color = color0;
                             position = vec4(position0, 0.0);
                             normal = vec4(normal0, 0.0);
-                        }
-                    "
+                        }"
                 }
             }
         },

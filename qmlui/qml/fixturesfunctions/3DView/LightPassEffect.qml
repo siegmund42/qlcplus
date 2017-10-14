@@ -29,30 +29,92 @@ Effect
         {
             graphicsApiFilter { api: GraphicsApiFilter.OpenGL; profile: GraphicsApiFilter.CoreProfile; majorVersion: 3; minorVersion: 1 }
             renderPasses:
+            [
+                // Lights pass
                 RenderPass
                 {
-                    filterKeys: FilterKey { name : "pass"; value : "final" }
+                    filterKeys: FilterKey { name : "pass"; value : "lights" }
                     shaderProgram: ShaderProgram {
-                        id: finalShaderGL3
-                        vertexShaderCode: loadSource("qrc:/final_gl3.vert")
-                        fragmentShaderCode: loadSource("qrc:/final_gl3.frag")
+                        vertexShaderCode: loadSource("qrc:/lights_gl3.vert")
+                        fragmentShaderCode: loadSource("qrc:/lights_gl3.frag")
+                    }
+                },
+                // Forward pass
+                RenderPass
+                {
+                    filterKeys : FilterKey { name : "pass"; value : "forward" }
+                    shaderProgram : ShaderProgram {
+                        vertexShaderCode:
+                            "#version 140
+
+                            in vec4 vertexPosition;
+                            uniform mat4 modelMatrix;
+
+                            void main()
+                            {
+                                gl_Position = modelMatrix * vertexPosition;
+                            }"
+                        fragmentShaderCode:
+                            "#version 140
+
+                            uniform sampler2D color;
+                            uniform vec2 winSize;
+
+                            out vec4 fragColor;
+
+                            void main()
+                            {
+                                vec2 texCoord = gl_FragCoord.xy / winSize;
+                                fragColor = texture(color, texCoord);
+                            }"
                     }
                 }
+            ]
         },
         // OpenGL 2.0 with FBO extension
         Technique
         {
             graphicsApiFilter { api: GraphicsApiFilter.OpenGL; profile: GraphicsApiFilter.NoProfile; majorVersion: 2; minorVersion: 0 }
             renderPasses:
+            [
+                // Lights pass
                 RenderPass
                 {
-                    filterKeys: FilterKey { name: "pass"; value: "final" }
+                    filterKeys: FilterKey { name: "pass"; value: "lights" }
                     shaderProgram: ShaderProgram {
-                        id: finalShaderGL2
-                        vertexShaderCode: loadSource("qrc:/final_es2.vert")
-                        fragmentShaderCode: loadSource("qrc:/final_es2.frag")
+                        vertexShaderCode: loadSource("qrc:/lights_es2.vert")
+                        fragmentShaderCode: loadSource("qrc:/lights_es2.frag")
+                    }
+                },
+                // Forward pass
+                RenderPass
+                {
+                    filterKeys : FilterKey { name : "pass"; value : "forward" }
+                    shaderProgram : ShaderProgram {
+                        vertexShaderCode:
+                            "#version 110
+
+                            attribute vec4 vertexPosition;
+                            uniform mat4 modelMatrix;
+
+                            void main()
+                            {
+                                gl_Position = modelMatrix * vertexPosition;
+                            }"
+                        fragmentShaderCode:
+                            "#version 130
+
+                            uniform sampler2D color;
+                            uniform vec2 winSize;
+
+                            void main()
+                            {
+                                vec2 texCoord = gl_FragCoord.xy / winSize;
+                                gl_FragColor = texture(color, texCoord);
+                            }"
                     }
                 }
+            ]
         }
     ]
 }

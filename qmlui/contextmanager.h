@@ -39,10 +39,12 @@ class ContextManager : public QObject
 {
     Q_OBJECT
 
+    Q_PROPERTY(QString currentContext READ currentContext NOTIFY currentContextChanged)
     Q_PROPERTY(quint32 universeFilter READ universeFilter WRITE setUniverseFilter NOTIFY universeFilterChanged)
     Q_PROPERTY(bool hasSelectedFixtures READ hasSelectedFixtures NOTIFY selectedFixturesChanged)
     Q_PROPERTY(QVector3D fixturesPosition READ fixturesPosition WRITE setFixturesPosition NOTIFY fixturesPositionChanged)
     Q_PROPERTY(QVector3D fixturesRotation READ fixturesRotation WRITE setFixturesRotation NOTIFY fixturesRotationChanged)
+    Q_PROPERTY(bool positionPicking READ positionPicking WRITE setPositionPicking NOTIFY positionPickingChanged)
 
 public:
     explicit ContextManager(QQuickView *view, Doc *doc,
@@ -69,6 +71,16 @@ public:
 
     /** Return the currently active context */
     QString currentContext() const;
+
+    /** Enable/Disable a position picking process */
+    bool positionPicking() const;
+    void setPositionPicking(bool enable);
+
+    Q_INVOKABLE void setPositionPickPoint(QVector3D point);
+
+signals:
+    void currentContextChanged();
+    void positionPickingChanged();
 
 public slots:
     /** Resets the data structures and update the currently enabled views */
@@ -102,6 +114,9 @@ private:
 
     QMap <QString, PreviewContext *> m_contextsMap;
 
+    /** Flag that indicates if a position picking is active */
+    bool m_positionPicking;
+
     /*********************************************************************
      * Universe filtering
      *********************************************************************/
@@ -122,17 +137,23 @@ private:
      * Common fixture helpers
      *********************************************************************/
 public:
+    /** Select/Deselect a fixture with the provided $fxID */
     Q_INVOKABLE void setFixtureSelection(quint32 fxID, bool enable);
 
+    /** Deselect all the currently selected fixtures */
     Q_INVOKABLE void resetFixtureSelection();
 
+    /** Toggle between none/all fixture selection */
     Q_INVOKABLE void toggleFixturesSelection();
 
-    Q_INVOKABLE void updateFixturesCapabilities();
-
+    /** Select the fixtures that intersects the provided rectangle coordinates in a 2D environment */
     Q_INVOKABLE void setRectangleSelection(qreal x, qreal y, qreal width, qreal height);
 
+    /** Returns if at least one fixture is currently selected */
     bool hasSelectedFixtures();
+
+    /** Returns if the fixture with $fxID is currently selected */
+    Q_INVOKABLE bool isFixtureSelected(quint32 fxID);
 
     /** Sets the position of the Fixture with the provided $fxID */
     Q_INVOKABLE void setFixturePosition(quint32 fxID, qreal x, qreal y, qreal z);
@@ -142,6 +163,8 @@ public:
     void setFixturesPosition(QVector3D position);
 
     Q_INVOKABLE void setFixturesAlignment(int alignment);
+
+    Q_INVOKABLE void updateFixturesCapabilities();
 
     Q_INVOKABLE void createFixtureGroup();
 

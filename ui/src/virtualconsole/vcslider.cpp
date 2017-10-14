@@ -465,7 +465,6 @@ void VCSlider::setSliderMode(SliderMode mode)
             if (m_widgetMode == WSlider)
                 m_slider->setStyleSheet(CNG_DEFAULT_STYLE);
         }
-        slotSliderMoved(level);
 
         m_bottomLabel->show();
         if (m_cngType != ClickAndGoWidget::None)
@@ -610,7 +609,7 @@ bool VCSlider::channelsMonitorEnabled() const
 void VCSlider::setLevelValue(uchar value)
 {
     QMutexLocker locker(&m_levelValueMutex);
-    m_levelValue = value;
+    m_levelValue = CLAMP(value, levelLowLimit(), levelHighLimit());
     if (m_monitorEnabled == true)
         m_monitorValue = m_levelValue;
     m_levelValueChanged = true;
@@ -650,7 +649,7 @@ void VCSlider::slotMonitorDMXValueChanged(int value)
 
         if (m_slider)
             m_slider->blockSignals(true);
-        setSliderValue(value, true);
+        setSliderValue(value, false);
         setTopLabelText(sliderValue());
         if (m_slider)
             m_slider->blockSignals(false);
@@ -897,6 +896,7 @@ void VCSlider::slotPlaybackFunctionStopped(quint32 fid)
         if (m_slider)
             m_slider->setValue(0);
         resetIntensityOverrideAttribute();
+        updateFeedback();
     }
     updateFeedback();
     m_externalMovement = false;
@@ -1176,7 +1176,7 @@ QString VCSlider::topLabelText()
  * Slider
  *****************************************************************************/
 
-void VCSlider::setSliderValue(uchar value, bool noScale)
+void VCSlider::setSliderValue(uchar value, bool scale)
 {
     if (m_slider == NULL)
         return;
@@ -1184,7 +1184,7 @@ void VCSlider::setSliderValue(uchar value, bool noScale)
     float val = value;
 
     /* Scale from input value range to this slider's range */
-    if (!noScale)
+    if (scale)
     {
         val = SCALE((float) value, (float) 0, (float) UCHAR_MAX,
                 (float) m_slider->minimum(),
@@ -1209,8 +1209,8 @@ void VCSlider::setSliderValue(uchar value, bool noScale)
                 m_resetButton->setStyleSheet(QString("QToolButton{ background: red; }"));
                 m_isOverriding = true;
             }
-            setLevelValue(value);
-            setClickAndGoWidgetFromLevel(value);
+            setLevelValue(val);
+            setClickAndGoWidgetFromLevel(val);
         }
         break;
 
@@ -1363,7 +1363,7 @@ void VCSlider::slotSliderMoved(int value)
     if (m_slider->isSliderDown() == false)
         return;
 
-    setSliderValue(value);
+    setSliderValue(value, false);
 
     updateFeedback();
 }

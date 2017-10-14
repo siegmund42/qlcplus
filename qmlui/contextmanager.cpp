@@ -20,6 +20,7 @@
 #include <QQmlContext>
 #include <QQuickItem>
 #include <QDebug>
+#include <QtMath>
 
 #include "contextmanager.h"
 #include "monitorproperties.h"
@@ -41,6 +42,7 @@ ContextManager::ContextManager(QQuickView *view, Doc *doc,
     , m_doc(doc)
     , m_fixtureManager(fxMgr)
     , m_functionManager(funcMgr)
+    , m_positionPicking(false)
     , m_universeFilter(Universe::invalid())
     , m_prevRotation(QVector3D(0, 0, 0))
     , m_editingEnabled(false)
@@ -79,9 +81,8 @@ ContextManager::ContextManager(QQuickView *view, Doc *doc,
 ContextManager::~ContextManager()
 {
     for (PreviewContext *context : m_contextsMap.values())
-        delete context;
+        context->deleteLater();
     //m_uniGridView->deleteLater();
-
 }
 
 void ContextManager::registerContext(PreviewContext *context)
@@ -128,6 +129,8 @@ void ContextManager::enableContext(QString name, bool enable, QQuickItem *item)
         m_2DView->updateFixtureSelection(m_selectedFixtures);
     else if (name == "3D")
         m_3DView->updateFixtureSelection(m_selectedFixtures);
+
+    emit currentContextChanged();
 }
 
 void ContextManager::detachContext(QString name)
@@ -196,7 +199,119 @@ void ContextManager::switchToContext(QString name)
 
 QString ContextManager::currentContext() const
 {
+    if (m_view == NULL || m_view->rootObject() == NULL)
+        return "";
+
     return m_view->rootObject()->property("currentContext").toString();
+}
+
+bool ContextManager::positionPicking() const
+{
+    return m_positionPicking;
+}
+
+void ContextManager::setPositionPicking(bool enable)
+{
+    if (enable == m_positionPicking)
+        return;
+
+    m_positionPicking = enable;
+
+    emit positionPickingChanged();
+}
+
+void ContextManager::setPositionPickPoint(QVector3D point)
+{
+    if (positionPicking() == false)
+        return;
+
+    point = QVector3D(point.x() + m_3DView->stageSize().x() / 2,
+                      0.0,
+                      point.z() + m_3DView->stageSize().z() / 2);
+
+    for (quint32 fxID : m_selectedFixtures)
+    {
+        Fixture *fixture = m_doc->fixture(fxID);
+        if (fixture == NULL)
+            continue;
+
+        quint32 panMSB = fixture->channelNumber(QLCChannel::Pan, QLCChannel::MSB);
+        quint32 tiltMSB = fixture->channelNumber(QLCChannel::Tilt, QLCChannel::MSB);
+
+        // don't even bother if the fixture doesn't have PAN/TILT channels
+        if (panMSB == QLCChannel::invalid() && tiltMSB == QLCChannel::invalid())
+            continue;
+
+        QVector3D lightPos = m_3DView->lightPosition(fxID);
+        lightPos = QVector3D(lightPos.x() + m_3DView->stageSize().x() / 2,
+                             lightPos.y() + 1.0,
+                             lightPos.z() + m_3DView->stageSize().z() / 2);
+
+        qDebug() << "3D point picked:" << point << "light position:" << lightPos;
+
+        if (panMSB != QLCChannel::invalid())
+        {
+            bool xLeft = point.x() < lightPos.x();
+            bool zBack = point.z() < lightPos.z();
+            qreal b = qAbs(lightPos.x() - point.x()); // Cathetus
+            qreal c = qAbs(lightPos.z() - point.z()); // Cathetus
+            qreal panDeg = qRadiansToDegrees(M_PI_2 - qAtan(c / b)); // PI/2 - angle
+
+            if (xLeft && !zBack)
+                panDeg = 90.0 + (90.0 - panDeg);
+            else if(!xLeft && !zBack)
+                panDeg = 180.0 + (90.0 - panDeg);
+            else if(!xLeft && zBack)
+                panDeg = 270.0 + (90.0 - panDeg);
+
+            qDebug() << "Fixture" << fxID << "pan degrees:" << panDeg;
+
+            QList<SceneValue> svList = m_fixtureManager->getFixturePosition(fxID, QLCChannel::Pan, panDeg);
+            foreach(SceneValue posSv, svList)
+            {
+                if (m_editingEnabled == false)
+                {
+                    m_source->set(posSv.fxi, posSv.channel, posSv.value);
+                    m_functionManager->setDumpValue(posSv.fxi, posSv.channel, posSv.value);
+                }
+                else
+                {
+                    m_functionManager->setChannelValue(posSv.fxi, posSv.channel, posSv.value);
+                }
+            }
+        }
+
+        if (tiltMSB != QLCChannel::invalid())
+        {
+            //bool zBack = point.z() < lightPos.z();
+            qreal b1 = qAbs(lightPos.x() - point.x()); // Cathetus
+            qreal b2 = qAbs(lightPos.z() - point.z()); // Cathetus
+            qreal b = qSqrt(b1 * b1 + b2 * b2); // Hypotenuse
+            qreal c = qAbs(lightPos.y() - point.y()); // Cathetus
+            qreal tiltDeg = qRadiansToDegrees(M_PI_2 - qAtan(c / b)); // PI/2 - angle
+            QLCPhysical phy = fixture->fixtureMode()->physical();
+
+            tiltDeg = phy.focusTiltMax() / 2 - tiltDeg;
+
+            qDebug() << "Fixture" << fxID << "tilt degrees:" << tiltDeg;
+
+            QList<SceneValue> svList = m_fixtureManager->getFixturePosition(fxID, QLCChannel::Tilt, tiltDeg);
+            foreach(SceneValue posSv, svList)
+            {
+                if (m_editingEnabled == false)
+                {
+                    m_source->set(posSv.fxi, posSv.channel, posSv.value);
+                    m_functionManager->setDumpValue(posSv.fxi, posSv.channel, posSv.value);
+                }
+                else
+                {
+                    m_functionManager->setChannelValue(posSv.fxi, posSv.channel, posSv.value);
+                }
+            }
+        }
+    }
+
+    setPositionPicking(false);
 }
 
 void ContextManager::resetContexts()
@@ -230,14 +345,13 @@ void ContextManager::handleKeyPress(QKeyEvent *e)
         switch(e->key())
         {
             case Qt::Key_A:
-            {
                 toggleFixturesSelection();
-            }
             break;
             case Qt::Key_R:
-            {
                 resetDumpValues();
-            }
+            break;
+            case Qt::Key_P:
+                setPositionPicking(true);
             break;
             default:
             break;
@@ -359,12 +473,6 @@ void ContextManager::toggleFixturesSelection()
     }
 }
 
-void ContextManager::updateFixturesCapabilities()
-{
-    for (quint32 id : m_selectedFixtures)
-        m_fixtureManager->getFixtureCapabilities(id, true);
-}
-
 void ContextManager::setRectangleSelection(qreal x, qreal y, qreal width, qreal height)
 {
     QList<quint32> fxIDList;
@@ -378,9 +486,12 @@ void ContextManager::setRectangleSelection(qreal x, qreal y, qreal width, qreal 
 
 bool ContextManager::hasSelectedFixtures()
 {
-    if (m_selectedFixtures.isEmpty())
-        return false;
-    return true;
+    return m_selectedFixtures.isEmpty() ? false : true;
+}
+
+bool ContextManager::isFixtureSelected(quint32 fxID)
+{
+    return m_selectedFixtures.contains(fxID) ? true : false;
 }
 
 void ContextManager::setFixturePosition(quint32 fxID, qreal x, qreal y, qreal z)
@@ -450,6 +561,12 @@ void ContextManager::setFixturesAlignment(int alignment)
         if (m_2DView->isEnabled())
             m_2DView->updateFixturePosition(fxID, fxPos);
     }
+}
+
+void ContextManager::updateFixturesCapabilities()
+{
+    for (quint32 id : m_selectedFixtures)
+        m_fixtureManager->getFixtureCapabilities(id, true);
 }
 
 void ContextManager::createFixtureGroup()
@@ -634,7 +751,9 @@ void ContextManager::slotPositionChanged(int type, int degrees)
                 m_functionManager->setDumpValue(posSv.fxi, posSv.channel, posSv.value);
             }
             else
+            {
                 m_functionManager->setChannelValue(posSv.fxi, posSv.channel, posSv.value);
+            }
         }
     }
 }
@@ -658,7 +777,7 @@ void ContextManager::slotPresetChanged(const QLCChannel *channel, quint8 value)
 
 void ContextManager::slotUniversesWritten(int idx, const QByteArray &ua)
 {
-    foreach(Fixture *fixture, m_doc->fixtures())
+    for (Fixture *fixture : m_doc->fixtures())
     {
         if (fixture->universe() != (quint32)idx)
             continue;

@@ -59,7 +59,9 @@ typedef struct
     /** The attached light index */
     unsigned int m_lightIndex;
     /** The bounding volume information */
-    BoundingVolume m_selectionBox;
+    BoundingVolume m_volume;
+    /** The selection box entity */
+    QEntity *m_selectionBox;
 
 } FixtureMesh;
 
@@ -97,8 +99,9 @@ private:
     /** Reference to the Doc Monitor properties */
     MonitorProperties *m_monProps;
 
-    /** Pre-cached QML component for quick item creation */
+    /** Pre-cached QML components for quick item creation */
     QQmlComponent *m_fixtureComponent;
+    QQmlComponent *m_selectionComponent;
 
     /*********************************************************************
      * Fixtures
@@ -110,8 +113,7 @@ public:
 
     void createFixtureItem(quint32 fxID, qreal x, qreal y, qreal z, bool mmCoords = true);
 
-    Q_INVOKABLE void initializeFixture(quint32 fxID, QEntity *fxEntity, QComponent *picker,
-                                       QSceneLoader *loader, QLayer *layer, QEffect *effect);
+    Q_INVOKABLE void initializeFixture(quint32 fxID, QEntity *fxEntity, QComponent *picker, QSceneLoader *loader);
 
     void updateFixture(Fixture *fixture);
 
@@ -123,13 +125,15 @@ public:
 
     void updateFixtureRotation(quint32 fxID, QVector3D degrees);
 
+    QVector3D lightPosition(quint32 fixtureID);
+
 protected:
     /** First time 3D view variables initializations */
     void initialize3DProperties();
 
     /** Bounding box volume calculation methods */
-    void calculateMeshExtents(QGeometryRenderer *mesh, QVector3D &meshExtents, QVector3D &meshCenter);
-    void addVolumes(FixtureMesh *meshRef, QVector3D center, QVector3D extent);
+    void getMeshCorners(QGeometryRenderer *mesh, QVector3D &minCorner, QVector3D &maxCorner);
+    void addVolumes(FixtureMesh *meshRef, QVector3D minCorner, QVector3D maxCorner);
 
     /** Recursive method to get/set all the information of a scene */
     QEntity *inspectEntity(QEntity *entity, FixtureMesh *meshRef,
