@@ -310,6 +310,11 @@ Rectangle
                     console.log("Clicked item ID: " + currentItemID)
                     dataCanvas.movingSelection = true
                 }
+                else
+                {
+                    // handle outside click
+                    gridRoot.pressed(-1, -1, 0);
+                }
             }
             onPositionChanged:
             {

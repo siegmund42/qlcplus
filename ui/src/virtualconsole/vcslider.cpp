@@ -60,6 +60,10 @@
  *  playback value change stable */
 #define PLAYBACK_CHANGE_THRESHOLD   5  // roughly this is 100ms
 
+/** +/- value range to catch the slider for external
+ *  controllers with no feedback support */
+#define VALUE_CATCHING_THRESHOLD    4
+
 const quint8 VCSlider::sliderInputSourceId = 0;
 const quint8 VCSlider::overrideResetInputSourceId = 1;
 
@@ -147,6 +151,7 @@ VCSlider::VCSlider(QWidget* parent, Doc* doc) : VCWidget(parent, doc)
             m_slider, SLOT(setValue(int)));
 
     m_externalMovement = false;
+    m_lastInputValue = -1;
 
     /* Put stretchable space after the slider (to its right side) */
     m_hbox->addStretch();
@@ -302,6 +307,13 @@ void VCSlider::enableWidgetUI(bool enable)
     m_cngButton->setEnabled(enable);
     if (m_resetButton)
         m_resetButton->setEnabled(enable);
+    if (enable == false)
+        m_lastInputValue = -1;
+}
+
+void VCSlider::hideEvent(QHideEvent *)
+{
+    m_lastInputValue = -1;
 }
 
 /*****************************************************************************
@@ -1397,6 +1409,22 @@ void VCSlider::slotInputValueChanged(quint32 universe, quint32 channel, uchar va
     {
         if (m_slider)
         {
+            /* controllers that do not support feedbacks can catch up with the current
+             * slider value by entering a certain threshold or by 'surpassing' the current value */
+            if (m_doc->inputOutputMap()->feedbackPatch(universe) == NULL)
+            {
+                uchar currentValue = sliderValue();
+
+                // filter 'out of threshold' cases
+                if (m_lastInputValue == -1 ||
+                    (m_lastInputValue < currentValue - VALUE_CATCHING_THRESHOLD && value < currentValue - VALUE_CATCHING_THRESHOLD) ||
+                    (m_lastInputValue > currentValue + VALUE_CATCHING_THRESHOLD && value > currentValue + VALUE_CATCHING_THRESHOLD))
+                {
+                    m_lastInputValue = value;
+                    return;
+                }
+            }
+
             if (m_monitorEnabled == true && m_isOverriding == false)
             {
                 m_priority = DMXSource::Override;
@@ -1406,6 +1434,7 @@ void VCSlider::slotInputValueChanged(quint32 universe, quint32 channel, uchar va
             }
 
             setSliderValue(value);
+            m_lastInputValue = value;
         }
     }
     else if (checkInputSource(universe, pagedCh, value, sender(), overrideResetInputSourceId))

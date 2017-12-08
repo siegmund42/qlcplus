@@ -77,6 +77,37 @@ Rectangle
                     height: topBar.height - 2
                     imgSource: "qrc:/remove.svg"
                     tooltip: qsTr("Remove the selected items")
+                    onClicked:
+                    {
+                        if (gfhcDragItem.itemsList.length === 0)
+                            return;
+
+                        var fxDeleteList = []
+                        var fxGroupDeleteList = []
+
+                        for (var i = 0; i < gfhcDragItem.itemsList.length; i++)
+                        {
+                            var item = gfhcDragItem.itemsList[i]
+
+                            switch(item.itemType)
+                            {
+                                case App.UniverseDragItem:
+                                break;
+                                case App.FixtureGroupDragItem:
+                                    fxGroupDeleteList.push(item.cRef.id)
+                                break;
+                                case App.FixtureDragItem:
+                                    fxDeleteList.push(item.cRef.id)
+                                break;
+                            }
+                        }
+
+                        if (fxDeleteList.length)
+                            fixtureManager.deleteFixtures(fxDeleteList)
+
+                        if (fxGroupDeleteList.length)
+                            fixtureManager.deleteFixtureGroups(fxGroupDeleteList)
+                    }
                 }
                 Rectangle { Layout.fillWidth: true }
                 IconButton
@@ -276,7 +307,7 @@ Rectangle
                                     gfhcDragItem.x = 0
                                     gfhcDragItem.y = 0
                                     groupListView.dragActive = false
-                                    gfhcDragItem.itemsList = []
+                                    //gfhcDragItem.itemsList = []
                                 break;
                             }
                         }

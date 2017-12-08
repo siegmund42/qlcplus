@@ -120,6 +120,10 @@ public:
     /** @reimp */
     void enableWidgetUI(bool enable);
 
+protected:
+    /** @reimp */
+    void hideEvent(QHideEvent* ev);
+
     /*********************************************************************
      * Properties
      *********************************************************************/
@@ -459,6 +463,7 @@ public:
 
 signals:
     void requestSliderUpdate(int value);
+    void valueChanged(QString val);
 
 private slots:
     void slotSliderMoved(int value);
@@ -559,15 +564,15 @@ protected slots:
     /** Called when an external input device produces input data */
     void slotInputValueChanged(quint32 universe, quint32 channel, uchar value);
 
+protected:
+    int m_lastInputValue;
+
     /*********************************************************************
      * Intensity
      *********************************************************************/
 public:
     /** @reimp */
     void adjustIntensity(qreal val);
-
-signals:
-    void valueChanged(QString val);
 
     /*********************************************************************
      * Load & Save

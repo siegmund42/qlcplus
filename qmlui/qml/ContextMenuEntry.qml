@@ -40,23 +40,14 @@ Rectangle
     signal entered
     signal exited
 
-    color: "transparent"
-    border.color: "#1D1D1D"
+    color: bgColor
+    border.color: UISettings.bgLight
     border.width: 1
 
     states: [
         State
         {
-            when: checked
-            PropertyChanges
-            {
-                target: baseMenuEntry
-                color: checkedColor
-            }
-        },
-        State
-        {
-            when: mouseArea1.pressed
+            when: entryMouseArea.pressed
             PropertyChanges
             {
                 target: baseMenuEntry
@@ -65,7 +56,7 @@ Rectangle
         },
         State
         {
-            when: mouseArea1.containsMouse
+            when: entryMouseArea.containsMouse
             PropertyChanges
             {
                 target: baseMenuEntry
@@ -98,9 +89,9 @@ Rectangle
 
     MouseArea
     {
-        id: mouseArea1
+        id: entryMouseArea
         anchors.fill: parent
-        hoverEnabled: true
+        hoverEnabled: baseMenuEntry.visible
         onEntered: baseMenuEntry.entered()
         onExited: baseMenuEntry.exited()
         onReleased: baseMenuEntry.clicked()

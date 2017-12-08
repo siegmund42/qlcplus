@@ -21,6 +21,7 @@
 #include <QQmlEngine>
 #include <QDebug>
 
+#include "genericdmxsource.h"
 #include "collectioneditor.h"
 #include "functionmanager.h"
 #include "rgbmatrixeditor.h"
@@ -43,6 +44,7 @@
 #include "show.h"
 #include "efx.h"
 
+#include "tardis.h"
 #include "doc.h"
 
 FunctionManager::FunctionManager(QQuickView *view, Doc *doc, QObject *parent)
@@ -61,10 +63,15 @@ FunctionManager::FunctionManager(QQuickView *view, Doc *doc, QObject *parent)
     m_currentEditor = NULL;
     m_sceneEditor = NULL;
 
+    m_view->rootContext()->setContextProperty("functionManager", this);
     qmlRegisterUncreatableType<Collection>("org.qlcplus.classes", 1, 0, "Collection", "Can't create a Collection");
     qmlRegisterUncreatableType<Chaser>("org.qlcplus.classes", 1, 0, "Chaser", "Can't create a Chaser");
     qmlRegisterUncreatableType<RGBMatrix>("org.qlcplus.classes", 1, 0, "RGBMatrix", "Can't create a RGBMatrix");
     qmlRegisterUncreatableType<EFX>("org.qlcplus.classes", 1, 0, "EFX", "Can't create an EFX");
+
+    // register SceneValue to perform QVariant comparisons
+    qRegisterMetaType<SceneValue>();
+    QMetaType::registerComparators<SceneValue>();
 
     m_functionTree = new TreeModel(this);
     QQmlEngine::setObjectOwnership(m_functionTree, QQmlEngine::CppOwnership);
@@ -75,6 +82,12 @@ FunctionManager::FunctionManager(QQuickView *view, Doc *doc, QObject *parent)
 
     connect(m_doc, &Doc::loaded, this, &FunctionManager::slotDocLoaded);
     connect(m_doc, &Doc::functionAdded, this, &FunctionManager::slotFunctionAdded);
+}
+
+
+FunctionManager::~FunctionManager()
+{
+    m_view->rootContext()->setContextProperty("functionManager", NULL);
 }
 
 QVariant FunctionManager::functionsList()
@@ -146,10 +159,10 @@ quint32 FunctionManager::createFunction(int type)
 
     switch(type)
     {
-    case Function::SceneType:
-    {
-        f = new Scene(m_doc);
-        name = tr("New Scene");
+        case Function::SceneType:
+        {
+            f = new Scene(m_doc);
+            name = tr("New Scene");
             m_sceneCount++;
             emit sceneCountChanged();
         }
@@ -253,17 +266,16 @@ quint32 FunctionManager::createFunction(int type)
 
     if (m_doc->addFunction(f) == true)
     {
+        m_functionTree->setItemRoleData(QString("%1/%2").arg(f->path(true)).arg(f->name()), 1, TreeModel::IsSelectedRole);
+
         f->setName(QString("%1 %2").arg(name).arg(f->id()));
         QQmlEngine::setObjectOwnership(f, QQmlEngine::CppOwnership);
 
-        QVariantList params;
-        params.append(QVariant::fromValue(f));
-        TreeModelItem *item = m_functionTree->addItem(f->name(), params, f->path(true));
-        if (item != NULL)
-            item->setFlag(TreeModel::Selected, true);
         m_selectedIDList.append(QVariant(f->id()));
         emit selectionCountChanged(m_selectedIDList.count());
-        emit functionsListChanged();
+
+        Tardis::instance()->enqueueAction(FunctionCreate, f->id(), QVariant(),
+                                          Tardis::instance()->actionToByteArray(FunctionCreate, f->id()));
 
         return f->id();
     }
@@ -381,11 +393,17 @@ void FunctionManager::setEditorFunction(quint32 fID, bool requestUI)
     // reset all the editor functions
     if (m_currentEditor != NULL)
     {
+        if (m_currentEditor->functionID() == fID)
+            return;
+
         delete m_currentEditor;
         m_currentEditor = NULL;
     }
     if (m_sceneEditor != NULL)
     {
+        if (m_sceneEditor->functionID() == fID)
+            return;
+
         delete m_sceneEditor;
         m_sceneEditor = NULL;
     }
@@ -472,6 +490,11 @@ void FunctionManager::setEditorFunction(quint32 fID, bool requestUI)
     emit isEditingChanged(true);
 }
 
+FunctionEditor *FunctionManager::currentEditor() const
+{
+    return m_currentEditor == NULL ? m_sceneEditor : m_currentEditor;
+}
+
 bool FunctionManager::isEditing() const
 {
     if (m_currentEditor != NULL)
@@ -494,6 +517,9 @@ void FunctionManager::deleteFunctions(QVariantList IDList)
         if (m_selectedIDList.contains(fID))
             m_selectedIDList.removeAll(fID);
 
+        Tardis::instance()->enqueueAction(FunctionDelete, f->id(),
+                                          Tardis::instance()->actionToByteArray(FunctionDelete, f->id()),
+                                          QVariant());
         m_doc->deleteFunction(f->id());
     }
 
@@ -567,10 +593,20 @@ int FunctionManager::viewPosition() const
  * DMX values (dumping and Scene editor)
  *********************************************************************/
 
-void FunctionManager::setDumpValue(quint32 fxID, quint32 channel, uchar value)
+void FunctionManager::setDumpValue(quint32 fxID, quint32 channel, uchar value, GenericDMXSource *source)
 {
-    m_dumpValues[QPair<quint32,quint32>(fxID, channel)] = value;
-    emit dumpValuesCountChanged();
+    QVariant currentVal, newVal;
+    uchar currDmxValue = m_dumpValues.value(QPair<quint32,quint32>(fxID, channel), 0);
+    currentVal.setValue(SceneValue(fxID, channel,currDmxValue));
+    newVal.setValue(SceneValue(fxID, channel, value));
+    if (currentVal != newVal || value != currDmxValue)
+    {
+        Tardis::instance()->enqueueAction(FixtureSetDumpValue, 0, currentVal, newVal);
+        if (source)
+            source->set(fxID, channel, value);
+        m_dumpValues[QPair<quint32,quint32>(fxID, channel)] = value;
+        emit dumpValuesCountChanged();
+    }
 }
 
 QMap<QPair<quint32, quint32>, uchar> FunctionManager::dumpValues() const
@@ -614,24 +650,79 @@ void FunctionManager::dumpOnNewScene(QList<quint32> selectedFixtures, QString na
         newScene->setName(name);
 
     if (m_doc->addFunction(newScene) == true)
-        slotDocLoaded();
+    {
+        setPreview(false);
+        updateFunctionsTree();
+        Tardis::instance()->enqueueAction(FunctionCreate, newScene->id(), QVariant(),
+                                          Tardis::instance()->actionToByteArray(FunctionCreate, newScene->id()));
+    }
     else
         delete newScene;
 }
 
 void FunctionManager::setChannelValue(quint32 fxID, quint32 channel, uchar value)
 {
-    if (m_currentEditor != NULL && m_currentEditor->functionType() == Function::SceneType)
+    FunctionEditor *editor = m_currentEditor;
+
+    if (editor != NULL && editor->functionType() == Function::SequenceType)
+        editor = m_sceneEditor;
+
+    if (editor != NULL && editor->functionType() == Function::SceneType)
     {
-        SceneEditor *se = qobject_cast<SceneEditor *>(m_currentEditor);
-        se->setChannelValue(fxID, channel, value);
+        Scene *scene = qobject_cast<Scene *>(m_doc->function(editor->functionID()));
+        if (scene == NULL)
+            return;
+
+        QVariant currentVal, newVal;
+        uchar currDmxValue = scene->value(fxID, channel);
+        currentVal.setValue(SceneValue(fxID, channel, currDmxValue));
+        newVal.setValue(SceneValue(fxID, channel, value));
+        if (currentVal != newVal || value != currDmxValue)
+        {
+            Tardis::instance()->enqueueAction(SceneSetChannelValue, scene->id(), currentVal, newVal);
+            scene->setValue(fxID, channel, value);
+        }
+    }
+}
+
+void FunctionManager::addFunctionTreeItem(Function *func)
+{
+    if (func == NULL || func->isVisible() == false)
+        return;
+
+    bool expandAll = m_searchFilter.length() >= SEARCH_MIN_CHARS;
+
+    QQmlEngine::setObjectOwnership(func, QQmlEngine::CppOwnership);
+
+    if ((m_filter == 0 || m_filter & func->type()) &&
+        (m_searchFilter.length() < SEARCH_MIN_CHARS || func->name().toLower().contains(m_searchFilter)))
+    {
+        QVariantList params;
+        params.append(QVariant::fromValue(func));
+        TreeModelItem *item = m_functionTree->addItem(func->name(), params, func->path(true), expandAll ? TreeModel::Expanded : 0);
+        if (m_selectedIDList.contains(QVariant(func->id())))
+            item->setFlag(TreeModel::Selected, true);
+    }
+
+    switch (func->type())
+    {
+        case Function::SceneType: m_sceneCount++; break;
+        case Function::ChaserType: m_chaserCount++; break;
+        case Function::SequenceType: m_sequenceCount++; break;
+        case Function::EFXType: m_efxCount++; break;
+        case Function::CollectionType: m_collectionCount++; break;
+        case Function::RGBMatrixType: m_rgbMatrixCount++; break;
+        case Function::ScriptType: m_scriptCount++; break;
+        case Function::ShowType: m_showCount++; break;
+        case Function::AudioType: m_audioCount++; break;
+        case Function::VideoType: m_videoCount++; break;
+        default:
+        break;
     }
 }
 
 void FunctionManager::updateFunctionsTree()
 {
-    bool expandAll = m_searchFilter.length() >= SEARCH_MIN_CHARS;
-
     m_sceneCount = m_chaserCount = m_sequenceCount = m_efxCount = 0;
     m_collectionCount = m_rgbMatrixCount = m_scriptCount = 0;
     m_showCount = m_audioCount = m_videoCount = 0;
@@ -640,35 +731,8 @@ void FunctionManager::updateFunctionsTree()
     m_functionTree->clear();
 
     for(Function *func : m_doc->functions()) // C++11
-    {
-        QQmlEngine::setObjectOwnership(func, QQmlEngine::CppOwnership);
+        addFunctionTreeItem(func);
 
-        if ((m_filter == 0 || m_filter & func->type()) &&
-            (m_searchFilter.length() < SEARCH_MIN_CHARS || func->name().toLower().contains(m_searchFilter)))
-        {
-            QVariantList params;
-            params.append(QVariant::fromValue(func));
-            TreeModelItem *item = m_functionTree->addItem(func->name(), params, func->path(true), expandAll ? TreeModel::Expanded : 0);
-            if (m_selectedIDList.contains(QVariant(func->id())))
-                item->setFlag(TreeModel::Selected, true);
-        }
-
-        switch (func->type())
-        {
-            case Function::SceneType: m_sceneCount++; break;
-            case Function::ChaserType: m_chaserCount++; break;
-            case Function::SequenceType: m_sequenceCount++; break;
-            case Function::EFXType: m_efxCount++; break;
-            case Function::CollectionType: m_collectionCount++; break;
-            case Function::RGBMatrixType: m_rgbMatrixCount++; break;
-            case Function::ScriptType: m_scriptCount++; break;
-            case Function::ShowType: m_showCount++; break;
-            case Function::AudioType: m_audioCount++; break;
-            case Function::VideoType: m_videoCount++; break;
-            default:
-            break;
-        }
-    }
     //m_functionTree->printTree(); // enable for debug purposes
 
     emit sceneCountChanged();
@@ -691,11 +755,13 @@ void FunctionManager::slotDocLoaded()
     updateFunctionsTree();
 }
 
-void FunctionManager::slotFunctionAdded(quint32)
+void FunctionManager::slotFunctionAdded(quint32 fid)
 {
-    if (m_doc->loadStatus() != Doc::Loaded)
+    if (m_doc->loadStatus() == Doc::Loading)
         return;
-    updateFunctionsTree();
+
+    Function *func = m_doc->function(fid);
+    addFunctionTreeItem(func);
 }
 
 

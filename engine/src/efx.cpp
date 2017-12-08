@@ -640,6 +640,21 @@ bool EFX::removeFixture(EFXFixture* ef)
     }
 }
 
+bool EFX::removeFixture(quint32 fxi, int head)
+{
+    for (int i = 0; i < m_fixtures.count(); i++)
+    {
+        EFXFixture *ef = m_fixtures.at(i);
+        if (ef->head().fxi == fxi && ef->head().head == head)
+        {
+            m_fixtures.removeAt(i);
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void EFX::removeAllFixtures()
 {
     m_fixtures.clear();
@@ -681,6 +696,17 @@ bool EFX::lowerFixture(EFXFixture* ef)
 const QList <EFXFixture*> EFX::fixtures() const
 {
     return m_fixtures;
+}
+
+EFXFixture *EFX::fixture(quint32 id, int headIndex)
+{
+    foreach (EFXFixture *ef, m_fixtures)
+    {
+        if (ef->head().fxi == id && ef->head().head == headIndex)
+            return ef;
+    }
+
+    return NULL;
 }
 
 void EFX::slotFixtureRemoved(quint32 fxi_id)

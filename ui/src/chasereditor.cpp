@@ -173,6 +173,8 @@ ChaserEditor::ChaserEditor(QWidget* parent, Chaser* chaser, Doc* doc, bool liveM
             this, SLOT(slotRaiseClicked()));
     connect(m_lower, SIGNAL(clicked()),
             this, SLOT(slotLowerClicked()));
+    connect(m_shuffle, SIGNAL(clicked()),
+            this, SLOT(slotShuffleClicked()));
     connect(m_speeddial, SIGNAL(toggled(bool)),
             this, SLOT(slotSpeedDialToggle(bool)));
     connect(m_fadeInCommonRadio, SIGNAL(toggled(bool)),
@@ -508,6 +510,65 @@ void ChaserEditor::slotLowerClicked()
 
     updateClipboardButtons();
     //printSteps();
+}
+
+void ChaserEditor::slotShuffleClicked()
+{
+    int i;
+    int selectedCount = m_tree->selectedItems().count();
+
+    if (selectedCount == 1)
+    {
+        // it doesn't make sense shuffling one step
+        return;
+    }
+    else if (selectedCount == 0)
+    {
+        m_tree->selectAll();
+        selectedCount = m_tree->selectedItems().count();
+    }
+
+    QList <QTreeWidgetItem*> selectedItems(m_tree->selectedItems());
+    int indicesToShuffle[selectedCount];
+    
+    // save the selected scenes and their indices into a sorted array
+    QListIterator <QTreeWidgetItem*> it(selectedItems);
+    for (i = 0; i < selectedCount; i++)
+    {
+        QTreeWidgetItem* item = it.next();
+        indicesToShuffle[i] = m_tree->indexOfTopLevelItem(item);
+    }
+    std::sort(indicesToShuffle, indicesToShuffle + selectedCount);
+
+    // shuffle the selected scenes using the Fisher-Yates algorithm
+    // see https://bost.ocks.org/mike/shuffle/ for information on the algorithm
+    int unshuffledCount = selectedCount;
+    while (unshuffledCount > 0)
+    {
+        // pick a random unshuffled selected and swap it with the last unshuffled one -> now it is a shuffled step
+        int toShuffle = rand() % unshuffledCount;
+        unshuffledCount--;
+        int indexToShuffle = indicesToShuffle[toShuffle];
+        int lastUnshuffledIndex = indicesToShuffle[unshuffledCount];
+
+        if (indexToShuffle != lastUnshuffledIndex)
+        {
+            QTreeWidgetItem* lastUnshuffledItem = m_tree->takeTopLevelItem(lastUnshuffledIndex);
+            QTreeWidgetItem* itemToShuffle = m_tree->takeTopLevelItem(indexToShuffle);
+            m_tree->insertTopLevelItem(indexToShuffle, lastUnshuffledItem);
+            m_tree->insertTopLevelItem(lastUnshuffledIndex, itemToShuffle);
+            m_chaser->moveStep(indexToShuffle, lastUnshuffledIndex);
+            m_chaser->moveStep(lastUnshuffledIndex - 1, indexToShuffle);
+        }
+    }
+
+    updateStepNumbers();
+    updateClipboardButtons();
+
+    // the selection is destroyed / weird after reordering scenes, so we restore it manually
+    m_tree->clearSelection();
+    for (i = 0; i < selectedCount; i++)
+        m_tree->topLevelItem(indicesToShuffle[i])->setSelected(true);
 }
 
 void ChaserEditor::slotSpeedDialToggle(bool state)
