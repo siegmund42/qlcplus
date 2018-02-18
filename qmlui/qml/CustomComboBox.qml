@@ -45,6 +45,26 @@ ComboBox
 
     signal valueChanged(int value)
 
+    onCurrentValueChanged:
+    {
+        if (!model)
+            return
+
+        //console.log("Value changed:" + currentValue + ", model count: " + model.length)
+        for (var i = 0; i < model.length; i++)
+        {
+            var item = model[i]
+            if (item.mValue === currentValue)
+            {
+                displayText = item.mLabel
+                if (item.mIcon)
+                    currentIcon = item.mIcon
+                currentIndex = i
+                return
+            }
+        }
+    }
+
     delegate:
         ItemDelegate
         {
@@ -57,23 +77,23 @@ ComboBox
 
             property int currentIdx: control.currentIndex
             text: model.mLabel ? model.mLabel : (modelData.mLabel ? modelData.mLabel : modelData)
-            property string itemIcon: model.mIcon ? model.mIcon : (modelData && modelData.mIcon ? modelData.mIcon : "")
+            property string itemIcon: model.mIcon ? model.mIcon : (typeof modelData !== 'undefined' ? modelData.mIcon ? modelData.mIcon : "" : "")
             property int itemValue: (model.mValue !== undefined) ? model.mValue : ((modelData.mValue !== undefined) ? modelData.mValue : index)
 
             Component.onCompleted:
             {
+                //console.log("Combo item completed index: " + index + ", label: " + text + ", value: " + itemValue)
+
                 if (index === control.currentIndex)
                 {
                     displayText = text
                     currentIcon = itemIcon
+                    if (itemValue !== undefined && itemValue != currentValue)
+                    {
+                        currentValue = itemValue
+                        control.valueChanged(itemValue)
+                    }
                 }
-                if (control.currentValue && itemValue === control.currentValue)
-                {
-                    displayText = text
-                    currentIcon = itemIcon
-                    currentIndex = index
-                }
-                //console.log("Combo item completed index: " + index)
             }
 
             onCurrentIdxChanged:
@@ -82,9 +102,10 @@ ComboBox
                 {
                     displayText = text
                     currentIcon = itemIcon
+                    console.log("Index changed:" + index + ", value: " + itemValue)
                     if (itemValue !== undefined)
                     {
-                        control.currentValue = itemValue
+                        currentValue = itemValue
                         control.valueChanged(itemValue)
                     }
                 }
@@ -94,9 +115,10 @@ ComboBox
                 Row
                 {
                     spacing: 2
+                    leftPadding: 3
+
                     Image
                     {
-                        id: iconItem
                         visible: itemIcon ? true : false
                         height: UISettings.listItemHeight - 4
                         width: height
@@ -107,7 +129,6 @@ ComboBox
 
                     RobotoText
                     {
-                        id: textitem
                         label: text
                         height: UISettings.listItemHeight
                         fontSize: UISettings.textSizeDefault
@@ -123,9 +144,9 @@ ComboBox
 
             onClicked:
             {
+                currentIndex = index
                 displayText = text
                 currentIcon = itemIcon
-                currentIndex = index
 
                 if (itemValue !== undefined)
                     control.valueChanged(itemValue)
@@ -147,8 +168,9 @@ ComboBox
     contentItem:
         Row
         {
-            x: 2
             spacing: 2
+            leftPadding: 3
+
             Image
             {
                 visible: currentIcon ? true : false

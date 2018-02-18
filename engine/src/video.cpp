@@ -32,7 +32,7 @@
 #define KXMLQLCVideoGeometry "Geometry"
 #define KXMLQLCVideoRotation "Rotation"
 
-const QStringList Video::m_defaultVideoCaps = QStringList() << "*.avi" << "*.wmv" << "*.mkv" << "*.mp4" << "*.mpg" << "*.mpeg" << "*.flv";
+const QStringList Video::m_defaultVideoCaps = QStringList() << "*.avi" << "*.wmv" << "*.mkv" << "*.mp4" << "*.mpg" << "*.mpeg" << "*.flv" << "*.webm";
 const QStringList Video::m_defaultPictureCaps = QStringList() << "*.png" << "*.bmp" << "*.jpg" << "*.jpeg" << "*.gif";
 
 /*****************************************************************************
@@ -107,13 +107,15 @@ QStringList Video::getVideoCapabilities()
 {
     QStringList caps;
     QStringList mimeTypes = QMediaPlayer::supportedMimeTypes();
-    qDebug() << "Supported video types:" << caps;
+
     if (mimeTypes.isEmpty())
     {
         return m_defaultVideoCaps;
     }
     else
     {
+        qDebug() << "Supported video types:" << mimeTypes;
+
         foreach(QString mime, mimeTypes)
         {
             if (mime.startsWith("video/"))
@@ -126,6 +128,7 @@ QStringList Video::getVideoCapabilities()
                 else if (mime.endsWith("/mpeg")) caps << "*.mpeg";
                 else if (mime.endsWith("/mpg")) caps << "*.mpg";
                 else if (mime.endsWith("/quicktime")) caps << "*.mov";
+                else if (mime.endsWith("/webm")) caps << "*.webm";
                 else if (mime.endsWith("matroska")) caps << "*.mkv";
             }
         }
@@ -143,6 +146,9 @@ QStringList Video::getPictureCapabilities()
  *********************************************************************/
 void Video::setTotalDuration(quint32 duration)
 {
+    if (m_videoDuration == (qint64)duration)
+        return;
+
     m_videoDuration = (qint64)duration;
     emit totalTimeChanged(m_videoDuration);
 }
@@ -461,13 +467,6 @@ void Video::write(MasterTimer* timer, QList<Universe *> universes)
     Q_UNUSED(universes)
 
     incrementElapsed();
-/*
-    if (fadeOutSpeed() != 0)
-    {
-        if (getDuration() - elapsed() <= fadeOutSpeed())
-            m_audio_out->setFadeOut(fadeOutSpeed());
-    }
-*/
 }
 
 void Video::postRun(MasterTimer* timer, QList<Universe*> universes)

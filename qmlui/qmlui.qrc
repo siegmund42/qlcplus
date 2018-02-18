@@ -48,13 +48,17 @@
     <file alias="ZoomItem.qml">qml/ZoomItem.qml</file>
 
     <!-- Popup system -->
-    <file alias="PopupPINRequest.qml">qml/PopupPINRequest.qml</file>
-    <file alias="PopupPINSetup.qml">qml/PopupPINSetup.qml</file>
-    <file alias="PopupRenameFunctions.qml">qml/PopupRenameFunctions.qml</file>
-    <file alias="PopupNetworkClient.qml">qml/PopupNetworkClient.qml</file>
-    <file alias="PopupNetworkConnect.qml">qml/PopupNetworkConnect.qml</file>
-    <file alias="PopupNetworkServer.qml">qml/PopupNetworkServer.qml</file>
-    <file alias="CustomPopupDialog.qml">qml/CustomPopupDialog.qml</file>
+    <file alias="CustomPopupDialog.qml">qml/popup/CustomPopupDialog.qml</file>
+    <file alias="PopupAbout.qml">qml/popup/PopupAbout.qml</file>
+    <file alias="PopupDisclaimer.qml">qml/popup/PopupDisclaimer.qml</file>
+    <file alias="PopupPINRequest.qml">qml/popup/PopupPINRequest.qml</file>
+    <file alias="PopupPINSetup.qml">qml/popup/PopupPINSetup.qml</file>
+    <file alias="PopupRenameFunctions.qml">qml/popup/PopupRenameFunctions.qml</file>
+    <file alias="PopupDMXDump.qml">qml/popup/PopupDMXDump.qml</file>
+    <file alias="PopupMonitor.qml">qml/popup/PopupMonitor.qml</file>
+    <file alias="PopupNetworkClient.qml">qml/popup/PopupNetworkClient.qml</file>
+    <file alias="PopupNetworkConnect.qml">qml/popup/PopupNetworkConnect.qml</file>
+    <file alias="PopupNetworkServer.qml">qml/popup/PopupNetworkServer.qml</file>
 
     <!-- Fixtures and Functions -->
     <file alias="FixturesAndFunctions.qml">qml/fixturesfunctions/FixturesAndFunctions.qml</file>
@@ -64,6 +68,7 @@
     <file alias="IntensityTool.qml">qml/fixturesfunctions/IntensityTool.qml</file>
     <file alias="PositionTool.qml">qml/fixturesfunctions/PositionTool.qml</file>
     <file alias="PresetsTool.qml">qml/fixturesfunctions/PresetsTool.qml</file>
+    <file alias="BeamTool.qml">qml/fixturesfunctions/BeamTool.qml</file>
     <file alias="PresetCapabilityItem.qml">qml/fixturesfunctions/PresetCapabilityItem.qml</file>
     <file alias="FixtureChannelDelegate.qml">qml/fixturesfunctions/FixtureChannelDelegate.qml</file>
     <file alias="FixtureHeadDelegate.qml">qml/fixturesfunctions/FixtureHeadDelegate.qml</file>
@@ -75,6 +80,7 @@
     <file alias="FixtureGroupEditor.qml">qml/fixturesfunctions/FixtureGroupEditor.qml</file>
     <file alias="FixtureGroupManager.qml">qml/fixturesfunctions/FixtureGroupManager.qml</file>
     <file alias="FixtureNodeDelegate.qml">qml/fixturesfunctions/FixtureNodeDelegate.qml</file>
+    <file alias="FixtureSummary.qml">qml/fixturesfunctions/FixtureSummary.qml</file>
     <file alias="GridEditor.qml">qml/fixturesfunctions/GridEditor.qml</file>
     <file alias="UniverseGridView.qml">qml/fixturesfunctions/UniverseGridView.qml</file>
     <file alias="UniverseSummary.qml">qml/fixturesfunctions/UniverseSummary.qml</file>

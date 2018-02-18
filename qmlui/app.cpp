@@ -90,12 +90,22 @@ App::~App()
 
 }
 
+QString App::appName() const
+{
+    return QString(APPNAME);
+}
+
+QString App::appVersion() const
+{
+    return QString(APPVERSION);
+}
+
 void App::startup()
 {
     qmlRegisterType<Fixture>("org.qlcplus.classes", 1, 0, "Fixture");
     qmlRegisterType<Function>("org.qlcplus.classes", 1, 0, "Function");
     qmlRegisterType<ModelSelector>("org.qlcplus.classes", 1, 0, "ModelSelector");
-    qmlRegisterType<App>("org.qlcplus.classes", 1, 0, "App");
+    qmlRegisterUncreatableType<App>("org.qlcplus.classes", 1, 0, "App", "Can't create an App !");
 
     setTitle(APPNAME);
     setIcon(QIcon(":/qlcplus.svg"));
@@ -105,8 +115,8 @@ void App::startup()
 
     rootContext()->setContextProperty("qlcplus", this);
 
-    m_pixelDensity = screen()->physicalDotsPerInch() *  0.039370;
-    qDebug() << "Pixel density:" << m_pixelDensity;
+    m_pixelDensity = qMax(screen()->physicalDotsPerInch() *  0.039370, (qreal)screen()->size().height() / 220.0);
+    qDebug() << "Pixel density:" << m_pixelDensity << "size:" << screen()->physicalSize();
 
     rootContext()->setContextProperty("screenPixelDensity", m_pixelDensity);
 
@@ -127,14 +137,8 @@ void App::startup()
     m_showManager = new ShowManager(this, m_doc);
     rootContext()->setContextProperty("showManager", m_showManager);
 
-    // register an uncreatable type just to use the enums in QML
-    qmlRegisterUncreatableType<ShowManager>("org.qlcplus.classes", 1, 0, "ShowManager", "Can't create a ShowManager !");
-
     m_networkManager = new NetworkManager(this, m_doc);
     rootContext()->setContextProperty("networkManager", m_networkManager);
-
-    // register an uncreatable type just to use the enums in QML
-    qmlRegisterUncreatableType<NetworkManager>("org.qlcplus.classes", 1, 0, "NetworkManager", "Can't create a NetworkManager !");
 
     connect(m_networkManager, &NetworkManager::clientAccessRequest, this, &App::slotClientAccessRequest);
     connect(m_networkManager, &NetworkManager::accessMaskChanged, this, &App::setAccessMask);
@@ -147,6 +151,11 @@ void App::startup()
     m_contextManager->registerContext(m_virtualConsole);
     m_contextManager->registerContext(m_showManager);
     m_contextManager->registerContext(m_ioManager);
+
+    // register an uncreatable type just to use the enums in QML
+    qmlRegisterUncreatableType<ContextManager>("org.qlcplus.classes", 1, 0, "ContextManager", "Can't create a ContextManager !");
+    qmlRegisterUncreatableType<ShowManager>("org.qlcplus.classes", 1, 0, "ShowManager", "Can't create a ShowManager !");
+    qmlRegisterUncreatableType<NetworkManager>("org.qlcplus.classes", 1, 0, "NetworkManager", "Can't create a NetworkManager !");
 
     // Start up in non-modified state
     m_doc->resetModified();
@@ -227,7 +236,7 @@ void App::keyReleaseEvent(QKeyEvent *e)
 
 void App::slotScreenChanged(QScreen *screen)
 {
-    m_pixelDensity = screen->physicalDotsPerInch() *  0.039370;
+    m_pixelDensity = qMax(screen->physicalDotsPerInch() *  0.039370, (qreal)screen->size().height() / 220.0);
     qDebug() << "Screen changed to" << screen->name() << ". New pixel density:" << m_pixelDensity;
     rootContext()->setContextProperty("screenPixelDensity", m_pixelDensity);
 }
@@ -537,6 +546,10 @@ bool App::saveWorkspace(const QString &fileName)
     /* Always use the workspace suffix */
     if (localFilename.right(4) != KExtWorkspace)
         localFilename += KExtWorkspace;
+
+    /* Set the workspace path before saving the new XML. In this way local files
+       can be loaded even if the workspace file will be moved */
+    m_doc->setWorkspacePath(QFileInfo(localFilename).absolutePath());
 
     if (saveXML(localFilename) == QFile::NoError)
     {

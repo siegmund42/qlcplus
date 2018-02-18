@@ -104,8 +104,9 @@ Rectangle
 
                 onBackClicked:
                 {
-                    functionManager.setEditorFunction(-1, false)
-                    requestView(-1, "qrc:/FunctionManager.qml")
+                    var prevID = efxEditor.previousID
+                    functionManager.setEditorFunction(prevID, false, true)
+                    requestView(prevID, functionManager.getEditorResource(prevID))
                 }
             }
 
@@ -146,6 +147,7 @@ Rectangle
                         efxData: efxEditor.algorithmData
                         fixturesData: efxEditor.fixturesData
                         animationInterval: efxEditor.duration / (efxData.length / 2)
+                        isRelative: efxEditor.isRelative
                     }
 
                     SectionBox
@@ -464,6 +466,7 @@ Rectangle
                                 }
                                 CustomComboBox
                                 {
+                                    id: patternCombo
                                     Layout.fillWidth: true
                                     height: editorColumn.itemsHeight
                                     model: efxEditor.algorithms
@@ -480,8 +483,12 @@ Rectangle
 
                                     CustomCheckBox
                                     {
+                                        id: relativeCheck
                                         implicitWidth: UISettings.listItemHeight
                                         implicitHeight: implicitWidth
+                                        autoExclusive: false
+                                        checked: efxEditor.isRelative
+                                        onCheckedChanged: efxEditor.isRelative = checked
                                     }
 
                                     RobotoText
@@ -524,11 +531,13 @@ Rectangle
                                 // row 5
                                 RobotoText
                                 {
+                                    visible: !relativeCheck.checked
                                     label: qsTr("X offset")
                                     height: UISettings.listItemHeight
                                 }
                                 CustomSpinBox
                                 {
+                                    visible: !relativeCheck.checked
                                     Layout.fillWidth: true
                                     from: 0
                                     to: 255
@@ -539,11 +548,13 @@ Rectangle
                                 // row 6
                                 RobotoText
                                 {
+                                    visible: !relativeCheck.checked
                                     label: qsTr("Y offset")
                                     height: UISettings.listItemHeight
                                 }
                                 CustomSpinBox
                                 {
+                                    visible: !relativeCheck.checked
                                     Layout.fillWidth: true
                                     from: 0
                                     to: 255
@@ -586,11 +597,13 @@ Rectangle
                                 // row 9
                                 RobotoText
                                 {
+                                    visible: patternCombo.displayText === "Lissajous"
                                     label: qsTr("X frequency")
                                     height: UISettings.listItemHeight
                                 }
                                 CustomSpinBox
                                 {
+                                    visible: patternCombo.displayText === "Lissajous"
                                     Layout.fillWidth: true
                                     from: 0
                                     to: 32
@@ -601,11 +614,13 @@ Rectangle
                                 // row 10
                                 RobotoText
                                 {
+                                    visible: patternCombo.displayText === "Lissajous"
                                     label: qsTr("Y frequency")
                                     height: UISettings.listItemHeight
                                 }
                                 CustomSpinBox
                                 {
+                                    visible: patternCombo.displayText === "Lissajous"
                                     Layout.fillWidth: true
                                     from: 0
                                     to: 32
@@ -616,11 +631,13 @@ Rectangle
                                 // row 11
                                 RobotoText
                                 {
+                                    visible: patternCombo.displayText === "Lissajous"
                                     label: qsTr("X phase")
                                     height: UISettings.listItemHeight
                                 }
                                 CustomSpinBox
                                 {
+                                    visible: patternCombo.displayText === "Lissajous"
                                     Layout.fillWidth: true
                                     from: 0
                                     to: 360
@@ -632,11 +649,13 @@ Rectangle
                                 // row 9
                                 RobotoText
                                 {
+                                    visible: patternCombo.displayText === "Lissajous"
                                     label: qsTr("Y phase")
                                     height: UISettings.listItemHeight
                                 }
                                 CustomSpinBox
                                 {
+                                    visible: patternCombo.displayText === "Lissajous"
                                     Layout.fillWidth: true
                                     from: 0
                                     to: 360

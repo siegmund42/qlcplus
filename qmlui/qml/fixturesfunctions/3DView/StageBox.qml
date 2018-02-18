@@ -26,7 +26,7 @@ Entity
 {
     id: stage
 
-    property vector3d size: View3D.stageSize
+    property vector3d size: contextManager.environmentSize
 
     property Layer sceneLayer
     property Effect effect
@@ -51,21 +51,21 @@ Entity
         id: sideMesh
         xExtent: 0.2
         zExtent: size.z
-        yExtent: size.y
+        yExtent: size.y + 0.2
     }
 
     CuboidMesh
     {
         id: backMesh
-        xExtent: size.x
+        xExtent: size.x + 0.4
         zExtent: 0.2
-        yExtent: size.y
+        yExtent: size.y + 0.2
     }
 
     // ground mesh
     Entity
     {
-        property Transform transform: Transform { translation: Qt.vector3d(0, -1, 0) }
+        property Transform transform: Transform { translation: Qt.vector3d(0, - (groundMesh.yExtent / 2), 0) }
 
         ObjectPicker
         {
@@ -85,7 +85,9 @@ Entity
     // left side mesh
     Entity
     {
-        property Transform transform: Transform { translation: Qt.vector3d(-size.x / 2, (size.y / 2) -1, 0) }
+        property Transform transform: Transform { translation: Qt.vector3d((-size.x / 2) - (groundMesh.yExtent / 2),
+                                                                           (size.y / 2) - (groundMesh.yExtent / 2),
+                                                                           0) }
 
         components: [
             sideMesh,
@@ -98,7 +100,9 @@ Entity
     // right side mesh
     Entity
     {
-        property Transform transform: Transform { translation: Qt.vector3d(size.x / 2, (size.y / 2) -1, 0) }
+        property Transform transform: Transform { translation: Qt.vector3d((size.x / 2) + (groundMesh.yExtent / 2),
+                                                                           (size.y / 2) - (groundMesh.yExtent / 2),
+                                                                           0) }
 
         components: [
             sideMesh,
@@ -111,7 +115,9 @@ Entity
     // back mesh
     Entity
     {
-        property Transform transform: Transform { translation: Qt.vector3d(0, (size.y / 2) -1, -size.z / 2) }
+        property Transform transform: Transform { translation: Qt.vector3d(0,
+                                                                           (size.y / 2) - (groundMesh.yExtent / 2),
+                                                                           (-size.z / 2) - (groundMesh.yExtent / 2)) }
 
         components: [
             backMesh,

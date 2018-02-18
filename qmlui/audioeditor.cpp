@@ -17,7 +17,9 @@
   limitations under the License.
 */
 
+#include "audioplugincache.h"
 #include "audioeditor.h"
+#include "tardis.h"
 #include "audio.h"
 #include "doc.h"
 
@@ -50,6 +52,7 @@ void AudioEditor::setSourceFileName(QString sourceFileName)
     if (m_audio == NULL || m_audio->getSourceFileName() == sourceFileName)
         return;
 
+    Tardis::instance()->enqueueAction(AudioSetSource, m_audio->id(), m_audio->getSourceFileName(), sourceFileName);
     m_audio->setSourceFileName(sourceFileName);
     emit sourceFileNameChanged(sourceFileName);
     emit mediaInfoChanged();
@@ -57,7 +60,7 @@ void AudioEditor::setSourceFileName(QString sourceFileName)
     emit loopedChanged();
 }
 
-QStringList AudioEditor::mimeTypes() const
+QStringList AudioEditor::audioExtensions() const
 {
     if (m_audio == NULL)
         return QStringList();
@@ -69,19 +72,18 @@ QVariant AudioEditor::mediaInfo() const
 {
     QVariantMap infoMap;
 
-    if (m_audio != NULL)
-    {
-        AudioDecoder *adec = m_audio->getAudioDecoder();
-        if (adec != NULL)
-        {
-            AudioParameters ap = adec->audioParameters();
+    if (m_audio == NULL)
+        return QVariant();
 
-            infoMap.insert("duration", Function::speedToString(m_audio->totalDuration()));
-            infoMap.insert("sampleRate", QString("%1 Hz").arg(ap.sampleRate()));
-            infoMap.insert("channels", ap.channels());
-            infoMap.insert("bitrate", QString("%1 kb/s").arg(adec->bitrate()));
-        }
-    }
+    AudioDecoder *adec = m_audio->getAudioDecoder();
+    if (adec == NULL)
+        return QVariant();
+
+    AudioParameters ap = adec->audioParameters();
+    infoMap.insert("duration", Function::speedToString(m_audio->totalDuration()));
+    infoMap.insert("sampleRate", QString("%1 Hz").arg(ap.sampleRate()));
+    infoMap.insert("channels", ap.channels());
+    infoMap.insert("bitrate", QString("%1 kb/s").arg(adec->bitrate()));
 
     return QVariant::fromValue(infoMap);
 }
@@ -98,9 +100,68 @@ void AudioEditor::setLooped(bool looped)
 {
     if (m_audio != NULL)
     {
+        Tardis::instance()->enqueueAction(FunctionSetRunOrder, m_audio->id(), m_audio->runOrder(), looped ? Audio::Loop : Audio::SingleShot);
+
         if (looped)
             m_audio->setRunOrder(Audio::Loop);
         else
             m_audio->setRunOrder(Audio::SingleShot);
+    }
+}
+
+int AudioEditor::cardLineIndex() const
+{
+    if (m_audio == NULL || m_audio->audioDevice().isEmpty())
+        return 0;
+
+    QList<AudioDeviceInfo> devList = m_doc->audioPluginCache()->audioDevicesList();
+    int i = 1;
+    QString device = m_audio->audioDevice();
+
+    foreach(AudioDeviceInfo info, devList)
+    {
+        if (info.capabilities & AUDIO_CAP_OUTPUT)
+        {
+            if (info.privateName == device)
+                return i;
+            i++;
+        }
+
+    }
+    return 0;
+}
+
+void AudioEditor::setCardLineIndex(int cardLineIndex)
+{
+    if (m_audio == NULL)
+        return;
+
+    if (cardLineIndex == 0)
+    {
+        if (m_audio->audioDevice().isEmpty() == false)
+            emit cardLineIndexChanged(cardLineIndex);
+
+        m_audio->setAudioDevice("");
+        return;
+    }
+
+    QList<AudioDeviceInfo> devList = m_doc->audioPluginCache()->audioDevicesList();
+    int i = 1;
+
+    foreach(AudioDeviceInfo info, devList)
+    {
+        if (info.capabilities & AUDIO_CAP_OUTPUT)
+        {
+            if (i == cardLineIndex)
+            {
+                if (m_audio->audioDevice() != info.privateName)
+                    emit cardLineIndexChanged(cardLineIndex);
+
+                m_audio->setAudioDevice(info.privateName);
+                return;
+            }
+            i++;
+        }
+
     }
 }

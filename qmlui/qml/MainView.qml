@@ -31,6 +31,7 @@ Rectangle
     width: 800
     height: 600
     anchors.fill: parent
+    color: UISettings.bgMain
 
     property string currentContext: "FIXANDFUNC"
 
@@ -275,20 +276,13 @@ Rectangle
         } // end of RowLayout
     } // end of mainToolbar
 
-    Rectangle
+    Loader
     {
-        id: mainViewArea
+        id: mainViewLoader
         width: parent.width
         height: parent.height - mainToolbar.height
         y: mainToolbar.height
-        color: UISettings.bgMain
-
-        Loader
-        {
-            id: mainViewLoader
-            anchors.fill: parent
-            source: "qrc:/FixturesAndFunctions.qml"
-        }
+        source: "qrc:/FixturesAndFunctions.qml"
     }
 
     PopupNetworkConnect { id: clientAccessPopup }
@@ -312,5 +306,10 @@ Rectangle
         visible: false
         z: 99
         color: Qt.rgba(0, 0, 0, 0.5)
+    }
+
+    PopupDisclaimer
+    {
+        visible: true
     }
 }

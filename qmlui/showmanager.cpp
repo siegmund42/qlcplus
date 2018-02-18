@@ -18,16 +18,18 @@
 */
 
 #include "showmanager.h"
+#include "chaser.h"
 #include "track.h"
 #include "show.h"
 #include "doc.h"
-#include "chaser.h"
+#include "app.h"
 
 ShowManager::ShowManager(QQuickView *view, Doc *doc, QObject *parent)
     : PreviewContext(view, doc, "SHOWMGR", parent)
     , m_currentShow(NULL)
     , m_timeScale(5.0)
     , m_stretchFunctions(false)
+    , m_gridEnabled(false)
     , m_currentTime(0)
     , m_selectedTrack(-1)
     , m_itemsColor(Qt::gray)
@@ -37,6 +39,9 @@ ShowManager::ShowManager(QQuickView *view, Doc *doc, QObject *parent)
 
     setContextResource("qrc:/ShowManager.qml");
     setContextTitle(tr("Show Manager"));
+
+    App *app = qobject_cast<App *>(m_view);
+    m_tickSize = app->pixelDensity() * 18;
 
     siComponent = new QQmlComponent(m_view->engine(), QUrl("qrc:/ShowItem.qml"));
     if (siComponent->isError())
@@ -132,6 +137,11 @@ void ShowManager::setTimeScale(float timeScale)
     emit timeScaleChanged(timeScale);
 }
 
+float ShowManager::tickSize() const
+{
+    return m_tickSize;
+}
+
 bool ShowManager::stretchFunctions() const
 {
     return m_stretchFunctions;
@@ -144,6 +154,20 @@ void ShowManager::setStretchFunctions(bool stretchFunctions)
 
     m_stretchFunctions = stretchFunctions;
     emit stretchFunctionsChanged(stretchFunctions);
+}
+
+bool ShowManager::gridEnabled() const
+{
+    return m_gridEnabled;
+}
+
+void ShowManager::setGridEnabled(bool gridEnabled)
+{
+    if (m_gridEnabled == gridEnabled)
+        return;
+
+    m_gridEnabled = gridEnabled;
+    emit gridEnabledChanged(m_gridEnabled);
 }
 
 /*********************************************************************
@@ -277,6 +301,7 @@ bool ShowManager::checkAndMoveItem(ShowFunction *sf, int originalTrackIdx, int n
 
     Track *dstTrack = NULL;
 
+    // check if it's moving on a new track or an existing one
     if (newTrackIdx >= m_currentShow->tracks().count())
     {
         // create a new track here
@@ -294,7 +319,20 @@ bool ShowManager::checkAndMoveItem(ShowFunction *sf, int originalTrackIdx, int n
             return false;
     }
 
-    sf->setStartTime(newStartTime);
+    if (m_gridEnabled)
+    {
+        // calculate the X position from time and time scale
+        float xPos = ((float)newStartTime * m_tickSize) / (m_timeScale * 1000.0); // timescale * 1000 : tickSize = time : x
+        // round to the nearest snap position
+        xPos = qRound(xPos / m_tickSize) * m_tickSize;
+        // recalculate the time from pixels
+        float time = xPos * (1000 * m_timeScale) / m_tickSize; // xPos : time = tickSize : timescale * 1000
+        sf->setStartTime(time);
+    }
+    else
+    {
+        sf->setStartTime(newStartTime);
+    }
 
     // check if we need to move the ShowFunction to a different Track
     if (newTrackIdx != originalTrackIdx)

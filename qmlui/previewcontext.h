@@ -21,6 +21,7 @@
 #define PREVIEWCONTEXT_H
 
 #include <QObject>
+#include <QScreen>
 #include <QQuickView>
 
 class Doc;
@@ -35,7 +36,10 @@ public:
 
 protected:
     void keyPressEvent(QKeyEvent *e);
-    void keyReleaseEvent(QKeyEvent * e);
+    void keyReleaseEvent(QKeyEvent *e);
+
+public slots:
+    void slotScreenChanged(QScreen *screen);
 
 signals:
     void keyPressed(QKeyEvent *e);
@@ -62,9 +66,11 @@ public:
 
     QQuickView *view();
 
+    /** Get/Set the Quick item to access the context properties/objects */
     QQuickItem *contextItem();
     void setContextItem(QQuickItem *item);
 
+    /** Get the context display name */
     QString name() const;
 
     /** Get/Set the title that will be displayed on a detached window title bar */

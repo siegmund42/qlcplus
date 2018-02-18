@@ -37,6 +37,7 @@ public:
     {
         BoolType,
         IntType,
+        FloatType,
         StringType,
         ByteArrayType,
         Vector3DType,
@@ -44,7 +45,9 @@ public:
         ColorType,
         FontType,
         SceneValueType,
-        UIntPairType
+        UIntPairType,
+        StringIntPairType,
+        StringStringPairType
     };
 
     void initializePacket(QByteArray &packet, int opCode);

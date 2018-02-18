@@ -38,9 +38,9 @@ Rectangle
             return
 
         //console.log("Request to open Function editor. ID: " + funcID + " type: " + funcType)
-        functionManager.setEditorFunction(funcID, false)
+        functionManager.setEditorFunction(funcID, false, false)
         functionManager.viewPosition = functionsListView.contentY
-        var editorRes = functionManager.getEditorResource(funcType)
+        var editorRes = functionManager.getEditorResource(funcID)
 
         if (funcType === Function.ShowType)
         {
@@ -294,6 +294,7 @@ Rectangle
                               item.nodePath = path
                               item.isExpanded = isExpanded
                               item.nodeChildren = childrenModel
+                              item.dropKeys = "function"
                           }
                           else
                           {
@@ -363,6 +364,12 @@ Rectangle
                           ignoreUnknownSignals: true
                           target: item
                           onPathChanged: functionManager.setFolderPath(oldPath, newPath)
+                      }
+                      Connections
+                      {
+                          ignoreUnknownSignals: true
+                          target: item
+                          onItemsDropped: functionManager.moveFunctions(path)
                       }
                   } // Loader
               } // Component

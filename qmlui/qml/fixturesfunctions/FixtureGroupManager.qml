@@ -153,10 +153,9 @@ Rectangle
                             case App.UniverseDragItem:
                                 if (checked)
                                 {
-                                    fixtureManager.universeFilter = gfhcDragItem.itemsList[0].cRef.id
+                                    fixtureManager.itemID = gfhcDragItem.itemsList[0].cRef.id
                                     fixtureAndFunctions.currentViewQML = "qrc:/UniverseSummary.qml"
                                 }
-
                             break;
                             case App.FixtureGroupDragItem:
                                 if (checked)
@@ -171,6 +170,11 @@ Rectangle
 
                             break;
                             case App.FixtureDragItem:
+                                if (checked)
+                                {
+                                    fixtureManager.itemID = gfhcDragItem.itemsList[0].cRef.id
+                                    fixtureAndFunctions.currentViewQML = "qrc:/FixtureSummary.qml"
+                                }
                             break;
                         }
 
@@ -290,6 +294,9 @@ Rectangle
                                         if (model.hasChildren)
                                             model.isExpanded = item.isExpanded
                                     }
+
+                                    if (infoButton.checked)
+                                        fixtureManager.itemID = iID
                                 break;
                                 case App.DragStarted:
                                     if (qItem == item && !model.isSelected)

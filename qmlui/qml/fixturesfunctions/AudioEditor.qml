@@ -20,8 +20,10 @@
 import QtQuick 2.0
 import QtQuick.Layouts 1.1
 import QtQuick.Dialogs 1.1
+import QtQuick.Controls 2.1
 
 import org.qlcplus.classes 1.0
+import "TimeUtils.js" as TimeUtils
 import "."
 
 Rectangle
@@ -30,9 +32,27 @@ Rectangle
     color: "transparent"
 
     property int functionID: -1
-    property var mediaInfo: audioEditor.mediaInfo
+    property var mediaInfo: audioEditor ? audioEditor.mediaInfo : null
 
     signal requestView(int ID, string qmlSrc)
+
+    TimeEditTool
+    {
+        id: timeEditTool
+
+        parent: mainView
+        z: 99
+        x: rightSidePanel.x - width
+        visible: false
+
+        onValueChanged:
+        {
+            if (speedType == Function.FadeIn)
+                audioEditor.fadeInSpeed = val
+            else if (speedType == Function.FadeOut)
+                audioEditor.fadeOutSpeed = val
+        }
+    }
 
     EditorTopBar
     {
@@ -42,8 +62,9 @@ Rectangle
 
         onBackClicked:
         {
-            functionManager.setEditorFunction(-1, false)
-            requestView(-1, "qrc:/FunctionManager.qml")
+            var prevID = audioEditor.previousID
+            functionManager.setEditorFunction(prevID, false, true)
+            requestView(prevID, functionManager.getEditorResource(prevID))
         }
     }
 
@@ -99,12 +120,12 @@ Rectangle
 
                 onClicked:
                 {
-                    var extList = audioEditor.mimeTypes
+                    var extList = audioEditor.audioExtensions
                     var exts = qsTr("Audio files") + " ("
                     for (var i = 0; i < extList.length; i++)
                         exts += extList[i] + " "
                     exts += ")"
-                    openAudioDialog.nameFilters = [ exts, qsTr("All files (*)") ]
+                    openAudioDialog.nameFilters = [ exts, qsTr("All files") + " (*)" ]
                     openAudioDialog.visible = true
                     openAudioDialog.open()
                 }
@@ -112,7 +133,11 @@ Rectangle
         }
 
         // row 2
-        RobotoText { label: qsTr("Duration"); height: UISettings.listItemHeight }
+        RobotoText
+        {
+            label: qsTr("Duration")
+            height: UISettings.listItemHeight
+        }
         RobotoText
         {
             height: UISettings.listItemHeight
@@ -122,7 +147,11 @@ Rectangle
         }
 
         // row 3
-        RobotoText { label: qsTr("Channels"); height: UISettings.listItemHeight }
+        RobotoText
+        {
+            label: qsTr("Channels")
+            height: UISettings.listItemHeight
+        }
         RobotoText
         {
             height: UISettings.listItemHeight
@@ -132,7 +161,11 @@ Rectangle
         }
 
         // row 4
-        RobotoText { label: qsTr("Sample Rate"); height: UISettings.listItemHeight }
+        RobotoText
+        {
+            label: qsTr("Sample Rate")
+            height: UISettings.listItemHeight
+        }
         RobotoText
         {
             height: UISettings.listItemHeight
@@ -142,13 +175,137 @@ Rectangle
         }
 
         // row 5
-        RobotoText { label: qsTr("Bitrate"); height: UISettings.listItemHeight }
+        RobotoText
+        {
+            label: qsTr("Bitrate")
+            height: UISettings.listItemHeight
+        }
         RobotoText
         {
             height: UISettings.listItemHeight
             Layout.fillWidth: true
             label: mediaInfo ? mediaInfo.bitrate : ""
             labelColor: UISettings.fgLight
+        }
+
+        // row 6
+        RobotoText
+        {
+            label: qsTr("Playback mode")
+            height: UISettings.listItemHeight
+        }
+        RowLayout
+        {
+            height: UISettings.listItemHeight
+            //Layout.fillWidth: true
+
+            ButtonGroup { id: playbackModeGroup }
+
+            CustomCheckBox
+            {
+                implicitWidth: UISettings.iconSizeMedium
+                implicitHeight: implicitWidth
+                ButtonGroup.group: playbackModeGroup
+                checked: !audioEditor.looped
+                onClicked: if (checked) audioEditor.looped = false
+            }
+            RobotoText
+            {
+                height: UISettings.listItemHeight
+                label: qsTr("Single shot")
+            }
+
+            CustomCheckBox
+            {
+                implicitWidth: UISettings.iconSizeMedium
+                implicitHeight: implicitWidth
+                ButtonGroup.group: playbackModeGroup
+                checked: audioEditor.looped
+                onClicked: if (checked) audioEditor.looped = true
+            }
+            RobotoText
+            {
+                height: UISettings.listItemHeight
+                label: qsTr("Looped")
+            }
+        }
+
+        // row 7
+        RobotoText
+        {
+            label: qsTr("Output device")
+            height: UISettings.listItemHeight
+        }
+        CustomComboBox
+        {
+            id: audioCardsCombo
+            height: UISettings.listItemHeight
+            Layout.fillWidth: true
+            model: ioManager.audioOutputSources
+            currentIndex: audioEditor.cardLineIndex
+            onCurrentIndexChanged: audioEditor.cardLineIndex = currentIndex
+        }
+
+        // row 8
+        RobotoText
+        {
+            id: fiLabel
+            label: qsTr("Fade in")
+            height: UISettings.listItemHeight
+        }
+
+        Rectangle
+        {
+            Layout.fillWidth: true
+            height: UISettings.listItemHeight
+            color: UISettings.bgMedium
+
+            RobotoText
+            {
+                anchors.fill: parent
+                label: TimeUtils.timeToQlcString(audioEditor.fadeInSpeed, Function.Time)
+
+                MouseArea
+                {
+                    anchors.fill: parent
+                    onDoubleClicked:
+                    {
+                        timeEditTool.show(-1, this.mapToItem(mainView, 0, 0).y,
+                                          fiLabel.label, parent.label, Function.FadeIn)
+                    }
+                }
+            }
+        }
+
+        // row 9
+        RobotoText
+        {
+            id: foLabel
+            height: UISettings.listItemHeight
+            label: qsTr("Fade out")
+        }
+
+        Rectangle
+        {
+            Layout.fillWidth: true
+            height: UISettings.listItemHeight
+            color: UISettings.bgMedium
+
+            RobotoText
+            {
+                anchors.fill: parent
+                label: TimeUtils.timeToQlcString(audioEditor.fadeOutSpeed, Function.Time)
+
+                MouseArea
+                {
+                    anchors.fill: parent
+                    onDoubleClicked:
+                    {
+                        timeEditTool.show(-1, this.mapToItem(mainView, 0, 0).y,
+                                          foLabel.label, parent.label, Function.FadeOut)
+                    }
+                }
+            }
         }
     }
 }

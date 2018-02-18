@@ -26,6 +26,7 @@ FunctionEditor::FunctionEditor(QQuickView *view, Doc *doc, QObject *parent)
     , m_view(view)
     , m_doc(doc)
     , m_functionID(Function::invalidId())
+    , m_previousID(-1)
     , m_function(NULL)
     , m_functionType(Function::Undefined)
     , m_previewEnabled(false)
@@ -113,6 +114,25 @@ void FunctionEditor::setFunctionName(QString functionName)
     emit functionNameChanged(functionName);
 }
 
+int FunctionEditor::previousID() const
+{
+    return m_previousID;
+}
+
+void FunctionEditor::setPreviousID(int previousID)
+{
+    qDebug() << "Previous ID" << previousID;
+    if (m_previousID == previousID)
+        return;
+
+    m_previousID = previousID;
+    emit previousIDChanged(m_previousID);
+}
+
+/************************************************************************
+ * Speed
+ ************************************************************************/
+
 int FunctionEditor::tempoType() const
 {
     if (m_function == NULL)
@@ -164,6 +184,122 @@ void FunctionEditor::setTempoType(int tempoType)
     }
 
     emit tempoTypeChanged(tempoType);
+}
+
+int FunctionEditor::fadeInSpeed() const
+{
+    if (m_function == NULL)
+        return Function::defaultSpeed();
+
+    return m_function->fadeInSpeed();
+}
+
+void FunctionEditor::setFadeInSpeed(int fadeInSpeed)
+{
+    if (m_function == NULL)
+        return;
+
+    if (m_function->fadeInSpeed() == (uint)fadeInSpeed)
+        return;
+
+    Tardis::instance()->enqueueAction(FunctionSetFadeIn, m_function->id(), m_function->fadeInSpeed(), fadeInSpeed);
+    m_function->setFadeInSpeed(fadeInSpeed);
+    emit fadeInSpeedChanged(fadeInSpeed);
+}
+
+int FunctionEditor::holdSpeed() const
+{
+    if (m_function == NULL)
+        return Function::defaultSpeed();
+
+    return m_function->duration();
+}
+
+void FunctionEditor::setHoldSpeed(int holdSpeed)
+{
+    if (m_function == NULL)
+        return;
+
+    if (m_function->duration() - m_function->fadeInSpeed() == (uint)holdSpeed)
+        return;
+
+    uint duration = Function::speedAdd(m_function->fadeInSpeed(), holdSpeed);
+    Tardis::instance()->enqueueAction(FunctionSetDuration, m_function->id(), m_function->duration(), duration);
+    m_function->setDuration(duration);
+
+    emit holdSpeedChanged(holdSpeed);
+    emit durationChanged(duration);
+}
+
+int FunctionEditor::fadeOutSpeed() const
+{
+    if (m_function == NULL)
+        return Function::defaultSpeed();
+
+    return m_function->fadeOutSpeed();
+}
+
+void FunctionEditor::setFadeOutSpeed(int fadeOutSpeed)
+{
+    if (m_function == NULL)
+        return;
+
+    if (m_function->fadeOutSpeed() == (uint)fadeOutSpeed)
+        return;
+
+    Tardis::instance()->enqueueAction(FunctionSetFadeOut, m_function->id(), m_function->fadeOutSpeed(), fadeOutSpeed);
+    m_function->setFadeOutSpeed(fadeOutSpeed);
+    emit fadeOutSpeedChanged(fadeOutSpeed);
+}
+
+int FunctionEditor::duration() const
+{
+    if (m_function == NULL)
+        return Function::defaultSpeed();
+
+    return m_function->duration();
+}
+
+/************************************************************************
+ * Run order and direction
+ ************************************************************************/
+
+int FunctionEditor::runOrder() const
+{
+    if (m_function == NULL)
+        return Function::Loop;
+
+    return m_function->runOrder();
+}
+
+void FunctionEditor::setRunOrder(int runOrder)
+{
+    if (m_function == NULL || m_function->runOrder() == Function::RunOrder(runOrder))
+        return;
+
+    Tardis::instance()->enqueueAction(FunctionSetRunOrder, m_function->id(), m_function->runOrder(), runOrder);
+
+    m_function->setRunOrder(Function::RunOrder(runOrder));
+    emit runOrderChanged(runOrder);
+}
+
+int FunctionEditor::direction() const
+{
+    if (m_function == NULL)
+        return Function::Forward;
+
+    return m_function->direction();
+}
+
+void FunctionEditor::setDirection(int direction)
+{
+    if (m_function == NULL || m_function->direction() == Function::Direction(direction))
+        return;
+
+    Tardis::instance()->enqueueAction(FunctionSetDirection, m_function->id(), m_function->direction(), direction);
+
+    m_function->setDirection(Function::Direction(direction));
+    emit directionChanged(direction);
 }
 
 void FunctionEditor::deleteItems(QVariantList list)

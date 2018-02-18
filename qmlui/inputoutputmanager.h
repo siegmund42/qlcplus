@@ -37,8 +37,14 @@ class InputOutputManager : public PreviewContext
     Q_PROPERTY(QQmlListProperty<Universe> universes READ universes CONSTANT)
     Q_PROPERTY(QStringList universeNames READ universeNames CONSTANT)
     Q_PROPERTY(QVariant universesListModel READ universesListModel NOTIFY universesListModelChanged)
+    Q_PROPERTY(QVariant audioInputSources READ audioInputSources CONSTANT)
+    Q_PROPERTY(QVariant audioOutputSources READ audioOutputSources CONSTANT)
     Q_PROPERTY(QVariant audioInputDevice READ audioInputDevice NOTIFY audioInputDeviceChanged)
     Q_PROPERTY(QVariant audioOutputDevice READ audioOutputDevice NOTIFY audioOutputDeviceChanged)
+    Q_PROPERTY(bool blackout READ blackout WRITE setBlackout NOTIFY blackoutChanged)
+
+    Q_PROPERTY(bool inputCanConfigure READ inputCanConfigure NOTIFY inputCanConfigureChanged)
+    Q_PROPERTY(bool outputCanConfigure READ outputCanConfigure NOTIFY outputCanConfigureChanged)
 
     Q_PROPERTY(QString beatType READ beatType WRITE setBeatType NOTIFY beatTypeChanged)
     Q_PROPERTY(int bpmNumber READ bpmNumber WRITE setBpmNumber NOTIFY bpmNumberChanged)
@@ -62,9 +68,14 @@ public:
 
     Q_INVOKABLE void setSelectedItem(QQuickItem *item, int index);
 
+    /** Get/Set the global output blackout state */
+    bool blackout() const;
+    void setBlackout(bool blackout);
+
 signals:
     void universesChanged();
     void universesListModelChanged();
+    void blackoutChanged(bool blackout);
 
 private:
     /** List of references to the current Universes in Doc */
@@ -72,6 +83,7 @@ private:
 
     QQuickItem *m_selectedItem;
     int m_selectedUniverseIndex;
+    bool m_blackout;
 
     /*********************************************************************
      * Audio IO
@@ -80,8 +92,8 @@ public:
     QVariant audioInputDevice();
     QVariant audioOutputDevice();
 
-    Q_INVOKABLE QVariant audioInputSources();
-    Q_INVOKABLE QVariant audioOutputSources();
+    QVariant audioInputSources() const;
+    QVariant audioOutputSources() const;
 
 signals:
     void audioInputDeviceChanged();
@@ -102,6 +114,15 @@ public:
     Q_INVOKABLE void removeInputPatch(int universe);
     Q_INVOKABLE void setInputProfile(int universe, QString profileName);
 
+    Q_INVOKABLE void configurePlugin(bool input);
+
+    bool inputCanConfigure() const;
+    bool outputCanConfigure() const;
+
+signals:
+    void inputCanConfigureChanged();
+    void outputCanConfigureChanged();
+
 private:
     void clearInputList();
     void clearOutputList();
@@ -112,12 +133,13 @@ private:
 public:
     Q_INVOKABLE QVariant beatGeneratorsList();
 
+    /** Get/Set the beat generator type */
     QString beatType() const;
-
     void setBeatType(QString beatType);
 
+    /** Get/Set the number of beats per minute to emit
+     *  if beat generator is internal */
     int bpmNumber() const;
-
     void setBpmNumber(int bpmNumber);
 
 signals:
@@ -127,11 +149,9 @@ signals:
 
 protected slots:
     void slotBeatTypeChanged();
-    void slotBpmNumberChanged(int bpmNumber);
 
 private:
     QString m_beatType;
-    int m_bpmNumber;
 };
 
 #endif // INPUTOUTPUTMANAGER_H

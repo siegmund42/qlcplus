@@ -36,10 +36,19 @@ Q_DECLARE_METATYPE(TardisAction)
 typedef QPair<quint32, uint> UIntPair;
 Q_DECLARE_METATYPE(UIntPair)
 
+typedef QPair<QString, int> StringIntPair;
+Q_DECLARE_METATYPE(StringIntPair)
+
+typedef QPair<QString, QString> StringStringPair;
+Q_DECLARE_METATYPE(StringStringPair)
+
 enum
 {
+    /* Global settings */
+    EnvironmentSetSize = 0x0000,
+
     /* Fixture editing actions */
-    FixtureCreate = 0x0000,
+    FixtureCreate = 0x0100,
     FixtureDelete,
     FixtureMove,
     FixtureSetPosition,
@@ -50,9 +59,10 @@ enum
     FixtureGroupDelete,
 
     /* Function editing actions */
-    FunctionCreate = 0x0100,
+    FunctionCreate = 0x0200,
     FunctionDelete,
     FunctionSetName,
+    FunctionSetPath,
     FunctionSetRunOrder,
     FunctionSetDirection,
     FunctionSetTempoType,
@@ -85,6 +95,29 @@ enum
     EFXSetXPhase,
     EFXSetYPhase,
 
+    CollectionAddFunction,
+    CollectionRemoveFunction,
+
+    RGBMatrixSetFixtureGroup,
+    RGBMatrixSetAlgorithmIndex,
+    RGBMatrixSetStartColor,
+    RGBMatrixSetEndColor,
+    RGBMatrixSetScriptIntValue,
+    RGBMatrixSetScriptStringValue,
+    RGBMatrixSetText,
+    RGBMatrixSetTextFont,
+    RGBMatrixSetImage,
+    RGBMatrixSetOffset,
+    RGBMatrixSetAnimationStyle,
+
+    AudioSetSource,
+
+    VideoSetSource,
+    VideoSetScreenIndex,
+    VideoSetFullscreen,
+    VideoSetGeometry,
+    VideoSetRotation,
+
     /* Virtual console editing actions */
     VCWidgetCreate = 0xE000,
     VCWidgetDelete,
@@ -99,8 +132,22 @@ enum
     VCWidgetFont,
     VCWidgetPage,
 
+    VCButtonSetActionType,
+    VCButtonSetFunctionID,
+    VCButtonEnableStartupIntensity,
+    VCButtonSetStartupIntensity,
+
+    VCSliderSetMode,
+    VCSliderSetDisplayStyle,
+    VCSliderSetInverted,
+    VCSliderSetFunctionID,
+    VCSliderSetControlledAttribute,
+    VCSliderSetLowLimit,
+    VCSliderSetHighLimit,
+
     /* Virtual Console live actions */
-    VCButtonSetState = 0xF000,
+    VCButtonSetPressed = 0xF000,
+    VCSliderSetValue,
 
     /* Network protocol actions */
     NetAnnounce = 0xFF00,

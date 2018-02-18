@@ -23,53 +23,50 @@ import QtQuick.Layouts 1.1
 import org.qlcplus.classes 1.0
 import "."
 
-Rectangle
+RowLayout
 {
-    width: 100
     height: UISettings.iconSizeDefault
-    color: "transparent"
+    spacing: 4
 
     property string iSrc
     property string tLabel
+    property color tLabelColor: UISettings.fgMain
     property int tFontSize: UISettings.textSizeDefault
     property int functionType: -1
     property string faSource: ""
     property color faColor: "#222"
+    property int iconSize: height - 4
 
     onFunctionTypeChanged: iSrc = functionManager.functionIcon(functionType)
 
-    RowLayout
+    Image
     {
-        anchors.fill: parent
-        spacing: 4
+        visible: iSrc ? true : false
+        source: iSrc
+        height: iconSize
+        width: iconSize
+        sourceSize: Qt.size(iconSize, iconSize)
+    }
 
-        Image
-        {
-            visible: iSrc ? true : false
-            source: iSrc
-            height: parent.height - 4
-            width: height
-            sourceSize: Qt.size(width, height)
-        }
+    Text
+    {
+        id: faIcon
+        visible: faSource ? true : false
+        color: faColor
+        font.family: "FontAwesome"
+        font.pixelSize: iconSize
+        text: faSource
+    }
 
-        Text
-        {
-            id: faIcon
-            visible: faSource ? true : false
-            color: faColor
-            font.family: "FontAwesome"
-            font.pixelSize: parent.height - 4
-            text: faSource
-        }
-
-        RobotoText
-        {
-            Layout.fillWidth: true
-            height: parent.height
-            anchors.verticalCenter: parent.verticalCenter
-            label: tLabel
-            fontSize: tFontSize
-        }
+    RobotoText
+    {
+        Layout.fillWidth: true
+        height: parent.height
+        anchors.verticalCenter: parent.verticalCenter
+        label: tLabel
+        labelColor: tLabelColor
+        fontSize: tFontSize
     }
 }
+
 

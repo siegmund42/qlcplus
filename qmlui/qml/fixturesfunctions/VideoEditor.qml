@@ -53,8 +53,9 @@ Rectangle
 
         onBackClicked:
         {
-            functionManager.setEditorFunction(-1, false)
-            requestView(-1, "qrc:/FunctionManager.qml")
+            var prevID = videoEditor.previousID
+            functionManager.setEditorFunction(prevID, false, true)
+            requestView(prevID, functionManager.getEditorResource(prevID))
         }
     }
 
@@ -106,18 +107,19 @@ Rectangle
 
                 onClicked:
                 {
+                    var i
                     var videoExtList = videoEditor.videoExtensions
                     var picExtList = videoEditor.pictureExtensions
                     var vexts = qsTr("Video files") + " ("
-                    for (var i = 0; i < videoExtList.length; i++)
+                    for (i = 0; i < videoExtList.length; i++)
                         vexts += videoExtList[i] + " "
                     vexts += ")"
                     var pexts = qsTr("Picture files") + " ("
-                    for (var i = 0; i < picExtList.length; i++)
+                    for (i = 0; i < picExtList.length; i++)
                         pexts += picExtList[i] + " "
                     pexts += ")"
 
-                    openVideoDialog.nameFilters = [ vexts, pexts, qsTr("All files (*)") ]
+                    openVideoDialog.nameFilters = [ vexts, pexts, qsTr("All files") + " (*)" ]
                     openVideoDialog.visible = true
                     openVideoDialog.open()
                 }
@@ -290,6 +292,16 @@ Rectangle
                 implicitHeight: implicitWidth
                 ButtonGroup.group: geometryGroup
                 checked: videoEditor.customGeometry.width == 0 && videoEditor.customGeometry.height == 0
+                onToggled:
+                {
+                    if (checked)
+                    {
+                        geomXSpin.value = 0
+                        geomYSpin.value = 0
+                        geomWSpin.value = 0
+                        geomHSpin.value = 0
+                    }
+                }
             }
             RobotoText
             {
@@ -304,14 +316,17 @@ Rectangle
                 implicitHeight: implicitWidth
                 ButtonGroup.group: geometryGroup
                 checked: videoEditor.customGeometry.width != 0 && videoEditor.customGeometry.height != 0
-                onClicked:
+                onToggled:
                 {
                     if (checked)
                     {
                         if (!mediaInfo || !mediaInfo.Resolution)
                             return
 
-                        videoEditor.customGeometry = Qt.rect(0, 0, mediaInfo.Resolution.width, mediaInfo.Resolution.height)
+                        geomXSpin.value = 0
+                        geomYSpin.value = 0
+                        geomWSpin.value = mediaInfo.Resolution.width
+                        geomHSpin.value = mediaInfo.Resolution.height
                     }
                 }
             }

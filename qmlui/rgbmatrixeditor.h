@@ -43,10 +43,6 @@ class RGBMatrixEditor : public FunctionEditor
     Q_PROPERTY(QColor endColor READ endColor WRITE setEndColor NOTIFY endColorChanged)
     Q_PROPERTY(bool hasEndColor READ hasEndColor WRITE setHasEndColor NOTIFY hasEndColorChanged)
 
-    Q_PROPERTY(int fadeInSpeed READ fadeInSpeed WRITE setFadeInSpeed NOTIFY fadeInSpeedChanged)
-    Q_PROPERTY(int holdSpeed READ holdSpeed WRITE setHoldSpeed NOTIFY holdSpeedChanged)
-    Q_PROPERTY(int fadeOutSpeed READ fadeOutSpeed WRITE setFadeOutSpeed NOTIFY fadeOutSpeedChanged)
-
     // Text Algorithm specific properties
     Q_PROPERTY(QString algoText READ algoText WRITE setAlgoText NOTIFY algoTextChanged)
     Q_PROPERTY(QFont algoTextFont READ algoTextFont WRITE setAlgoTextFont NOTIFY algoTextFontChanged)
@@ -55,9 +51,6 @@ class RGBMatrixEditor : public FunctionEditor
 
     Q_PROPERTY(int animationStyle READ animationStyle WRITE setAnimationStyle NOTIFY animationStyleChanged)
     Q_PROPERTY(QSize algoOffset READ algoOffset WRITE setAlgoOffset NOTIFY algoOffsetChanged)
-
-    Q_PROPERTY(int runOrder READ runOrder WRITE setRunOrder NOTIFY runOrderChanged)
-    Q_PROPERTY(int direction READ direction WRITE setDirection NOTIFY directionChanged)
     
 public:
     RGBMatrixEditor(QQuickView *view, Doc *doc, QObject *parent = 0);
@@ -144,40 +137,6 @@ signals:
 
     void algoOffsetChanged(QSize algoOffset);
     void animationStyleChanged(int style);
-
-    /************************************************************************
-     * Speed
-     ************************************************************************/
-public:
-    int fadeInSpeed() const;
-    void setFadeInSpeed(int fadeInSpeed);
-
-    int holdSpeed() const;
-    void setHoldSpeed(int holdSpeed);
-
-    int fadeOutSpeed() const;
-    void setFadeOutSpeed(int fadeOutSpeed);
-
-signals:
-    void fadeInSpeedChanged(int fadeInSpeed);
-    void holdSpeedChanged(int holdSpeed);
-    void fadeOutSpeedChanged(int fadeOutSpeed);
-
-    /************************************************************************
-     * Run order and direction
-     ************************************************************************/
-public:
-    /** RGB Matrix run order getter/setter */
-    int runOrder() const;
-    void setRunOrder(int runOrder);
-
-    /** RGB Matrix direction getter/setter */
-    int direction() const;
-    void setDirection(int direction);
-
-signals:
-    void runOrderChanged(int runOrder);
-    void directionChanged(int direction);
 
     /************************************************************************
      * Preview

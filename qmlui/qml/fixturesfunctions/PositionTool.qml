@@ -46,6 +46,19 @@ Rectangle
     onPanMaxDegreesChanged: gCanvas.requestPaint()
     onTiltMaxDegreesChanged: gCanvas.requestPaint()
 
+    function tiltPositionsArray()
+    {
+        var halfTilt = tiltMaxDegrees / 2
+        var array = [ 0,
+                      halfTilt - 90,
+                      halfTilt - 45,
+                      halfTilt,
+                      halfTilt + 45,
+                      halfTilt + 90,
+                      tiltMaxDegrees ]
+        return array
+    }
+
     Rectangle
     {
         id: posToolBar
@@ -61,8 +74,6 @@ Rectangle
 
         RobotoText
         {
-            id: titleBox
-            y: 7
             height: parent.height
             anchors.horizontalCenter: parent.horizontalCenter
             label: qsTr("Position")
@@ -177,8 +188,6 @@ Rectangle
         width: parent.width - 20
         columns: 4
         rows: 2
-        //rowsSpacing: 10
-        //columnsSpacing: 10
 
         // row 1
         RobotoText
@@ -210,7 +219,7 @@ Rectangle
             tooltip: qsTr("Snap to the previous value")
             onClicked:
             {
-                var prev = (parseInt(panSpinBox.value / 90) * 90) - 90
+                var prev = (parseInt(panSpinBox.value / 45) * 45) - 45
                 if (prev >= 0)
                     panSpinBox.value = prev
             }
@@ -223,7 +232,7 @@ Rectangle
             tooltip: qsTr("Snap to the next value")
             onClicked:
             {
-                var next = (parseInt(panSpinBox.value / 90) * 90) + 90
+                var next = (parseInt(panSpinBox.value / 45) * 45) + 45
                 if (next <= panMaxDegrees)
                     panSpinBox.value = next
             }
@@ -259,12 +268,12 @@ Rectangle
             tooltip: qsTr("Snap to the previous value")
             onClicked:
             {
-                var fixedPos = [ 0, (tiltMaxDegrees / 2) - 90, tiltMaxDegrees / 2, (tiltMaxDegrees / 2) + 90, tiltMaxDegrees ]
+                var fixedPos = tiltPositionsArray()
                 for (var i = fixedPos.length - 1; i >= 0; i--)
                 {
-                    if (fixedPos[i] < tiltSpinBox.value)
+                    if (parseInt(fixedPos[i]) < tiltSpinBox.value)
                     {
-                        tiltSpinBox.value = fixedPos[i]
+                        tiltSpinBox.value = parseInt(fixedPos[i])
                         break;
                     }
                 }
@@ -278,12 +287,12 @@ Rectangle
             tooltip: qsTr("Snap to the next value")
             onClicked:
             {
-                var fixedPos = [ 0, (tiltMaxDegrees / 2) - 90, tiltMaxDegrees / 2, (tiltMaxDegrees / 2) + 90, tiltMaxDegrees ]
+                var fixedPos = tiltPositionsArray()
                 for (var i = 0; i < fixedPos.length; i++)
                 {
-                    if (tiltSpinBox.value < fixedPos[i])
+                    if (tiltSpinBox.value < parseInt(fixedPos[i]))
                     {
-                        tiltSpinBox.value = fixedPos[i]
+                        tiltSpinBox.value = parseInt(fixedPos[i])
                         break;
                     }
                 }

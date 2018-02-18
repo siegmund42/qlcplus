@@ -65,8 +65,9 @@ Rectangle
 
         onBackClicked:
         {
-            functionManager.setEditorFunction(-1, false)
-            requestView(-1, "qrc:/FunctionManager.qml")
+            var prevID = rgbMatrixEditor.previousID
+            functionManager.setEditorFunction(prevID, false, true)
+            requestView(prevID, functionManager.getEditorResource(prevID))
         }
     }
 
@@ -157,13 +158,13 @@ Rectangle
                     height: editorColumn.itemsHeight
                     model: rgbMatrixEditor.algorithms
                     currentIndex: rgbMatrixEditor.algorithmIndex
-                    onCurrentIndexChanged:
+                    onDisplayTextChanged:
                     {
                         rgbMatrixEditor.algorithmIndex = currentIndex
                         paramSection.sectionContents = null
-                        if (currentText == "Text")
+                        if (displayText == "Text")
                             paramSection.sectionContents = textAlgoComponent
-                        else if (currentText == "Image")
+                        else if (displayText == "Image")
                             paramSection.sectionContents = imageAlgoComponent
                         else
                             paramSection.sectionContents = scriptAlgoComponent

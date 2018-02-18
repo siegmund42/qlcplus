@@ -125,13 +125,19 @@ bool EFXEditor::isRelative() const
     return m_efx->isRelative();
 }
 
-void EFXEditor::setIsRelative(bool val)
+void EFXEditor::setIsRelative(bool relative)
 {
-    if (m_efx == NULL || val == m_efx->isRelative())
+    if (m_efx == NULL || relative == m_efx->isRelative())
         return;
 
-    Tardis::instance()->enqueueAction(EFXSetRelative, m_efx->id(), m_efx->isRelative(), val);
-    m_efx->setIsRelative(val);
+    Tardis::instance()->enqueueAction(EFXSetRelative, m_efx->id(), m_efx->isRelative(), relative);
+    m_efx->setIsRelative(relative);
+
+    if (relative)
+    {
+        setAlgorithmXOffset(127);
+        setAlgorithmYOffset(127);
+    }
     emit isRelativeChanged();
     updateAlgorithmData();
 }
@@ -597,7 +603,7 @@ void EFXEditor::updateFixtureTree(Doc *doc, TreeModel *treeModel)
             if (mode == NULL)
                 continue;
 
-            QString fxPath = QString("%1/%2").arg(grp->name()).arg(fixture->name());
+            QString fxPath = QString("%1%2%3").arg(grp->name()).arg(TreeModel::separator()).arg(fixture->name());
 
             for (int i = 0; i < fixture->heads(); i++)
             {
@@ -637,7 +643,7 @@ void EFXEditor::updateFixtureTree(Doc *doc, TreeModel *treeModel)
         if (fixture->universe() >= (quint32)uniNames.count())
             continue;
 
-        QString fxPath = QString("%1/%2").arg(uniNames.at(fixture->universe())).arg(fixture->name());
+        QString fxPath = QString("%1%2%3").arg(uniNames.at(fixture->universe())).arg(TreeModel::separator()).arg(fixture->name());
 
         for (int i = 0; i < fixture->heads(); i++)
         {
@@ -650,7 +656,7 @@ void EFXEditor::updateFixtureTree(Doc *doc, TreeModel *treeModel)
             treeModel->addItem(QString("%1 %2").arg(tr("Head")).arg(i + 1, 3, 10, QChar('0')), headParams, fxPath);
         }
 
-        // when all the channel 'leaves' have been added, set the parent node data
+        // when all the head 'leaves' have been added, set the parent node data
         QVariantList params;
         params.append(QVariant::fromValue(fixture)); // classRef
         params.append(App::FixtureDragItem); // type
@@ -673,120 +679,6 @@ void EFXEditor::updateFixtureTree(Doc *doc, TreeModel *treeModel)
 
         treeModel->setPathData(universe->name(), uniParams);
     }
-}
-
-/************************************************************************
- * Speed
- ************************************************************************/
-
-int EFXEditor::fadeInSpeed() const
-{
-    if (m_efx == NULL)
-        return Function::defaultSpeed();
-
-    return m_efx->fadeInSpeed();
-}
-
-void EFXEditor::setFadeInSpeed(int fadeInSpeed)
-{
-    if (m_efx == NULL || m_efx->fadeInSpeed() == (uint)fadeInSpeed)
-        return;
-
-    Tardis::instance()->enqueueAction(FunctionSetFadeIn, m_efx->id(), m_efx->fadeInSpeed(), fadeInSpeed);
-    m_efx->setFadeInSpeed(fadeInSpeed);
-    emit fadeInSpeedChanged(fadeInSpeed);
-}
-
-int EFXEditor::holdSpeed() const
-{
-    if (m_efx == NULL)
-        return Function::defaultSpeed();
-
-    return m_efx->duration();
-}
-
-void EFXEditor::setHoldSpeed(int holdSpeed)
-{
-    if (m_efx == NULL)
-        return;
-
-    if (m_efx->duration() - m_efx->fadeInSpeed() == (uint)holdSpeed)
-        return;
-
-    uint duration = Function::speedAdd(m_efx->fadeInSpeed(), holdSpeed);
-    Tardis::instance()->enqueueAction(FunctionSetDuration, m_efx->id(), m_efx->duration(), duration);
-    m_efx->setDuration(duration);
-
-    emit holdSpeedChanged(holdSpeed);
-    emit durationChanged(duration);
-}
-
-int EFXEditor::fadeOutSpeed() const
-{
-    if (m_efx == NULL)
-        return Function::defaultSpeed();
-
-    return m_efx->fadeOutSpeed();
-}
-
-void EFXEditor::setFadeOutSpeed(int fadeOutSpeed)
-{
-    if (m_efx == NULL || m_efx->fadeOutSpeed() == (uint)fadeOutSpeed)
-        return;
-
-    Tardis::instance()->enqueueAction(FunctionSetFadeOut, m_efx->id(), m_efx->fadeOutSpeed(), fadeOutSpeed);
-    m_efx->setFadeOutSpeed(fadeOutSpeed);
-    emit fadeOutSpeedChanged(fadeOutSpeed);
-}
-
-int EFXEditor::duration() const
-{
-    if (m_efx == NULL)
-        return Function::defaultSpeed();
-
-    return m_efx->duration();
-}
-
-/************************************************************************
- * Run order and direction
- ************************************************************************/
-
-int EFXEditor::runOrder() const
-{
-    if (m_efx == NULL)
-        return Function::Loop;
-
-    return m_efx->runOrder();
-}
-
-void EFXEditor::setRunOrder(int runOrder)
-{
-    if (m_efx == NULL || m_efx->runOrder() == Function::RunOrder(runOrder))
-        return;
-
-    Tardis::instance()->enqueueAction(FunctionSetRunOrder, m_efx->id(), m_efx->runOrder(), runOrder);
-
-    m_efx->setRunOrder(Function::RunOrder(runOrder));
-    emit runOrderChanged(runOrder);
-}
-
-int EFXEditor::direction() const
-{
-    if (m_efx == NULL)
-        return Function::Forward;
-
-    return m_efx->direction();
-}
-
-void EFXEditor::setDirection(int direction)
-{
-    if (m_efx == NULL || m_efx->direction() == Function::Direction(direction))
-        return;
-
-    Tardis::instance()->enqueueAction(FunctionSetDirection, m_efx->id(), m_efx->direction(), direction);
-
-    m_efx->setDirection(Function::Direction(direction));
-    emit directionChanged(direction);
 }
 
 /************************************************************************
@@ -814,8 +706,8 @@ void EFXEditor::updateAlgorithmData()
     m_algorithmData.clear();
     m_fixturesData.clear();
 
-    /** 1- fill a QVariantList or XY coordinates representing
-     *  the EFX algorithm */
+    /** 1- fill a QVariantList or XY coordinates in [0 - 255] range
+     *  representing the EFX algorithm */
     for (int i = 0; i < polygon.size(); i++)
     {
         QPointF pt = polygon.at(i);
@@ -849,10 +741,10 @@ void EFXEditor::updateAlgorithmData()
         }
         else
         {
-            /** With a start offset, we need scan the algorithm points
+            /** With a start offset, we need to scan the algorithm points
              *  to find the index of the closest one */
             m_efx->calculatePoint(fixture->direction(), fixture->startOffset(), 0, &x, &y);
-            qDebug() << "Got position:" << x << y << fixture->startOffset();
+            //qDebug() << "Got position:" << x << y << fixture->startOffset();
 
             for (int i = 0; i < polygon.count(); i++)
             {

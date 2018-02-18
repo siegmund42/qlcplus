@@ -46,7 +46,9 @@ class ShowManager : public PreviewContext
     Q_PROPERTY(QString showName READ showName WRITE setShowName NOTIFY showNameChanged)
     Q_PROPERTY(QColor itemsColor READ itemsColor WRITE setItemsColor NOTIFY itemsColorChanged)
     Q_PROPERTY(float timeScale READ timeScale WRITE setTimeScale NOTIFY timeScaleChanged)
+    Q_PROPERTY(float tickSize READ tickSize CONSTANT)
     Q_PROPERTY(bool stretchFunctions READ stretchFunctions WRITE setStretchFunctions NOTIFY stretchFunctionsChanged)
+    Q_PROPERTY(bool gridEnabled READ gridEnabled WRITE setGridEnabled NOTIFY gridEnabledChanged)
     Q_PROPERTY(int currentTime READ currentTime WRITE setCurrentTime NOTIFY currentTimeChanged)
     Q_PROPERTY(bool isPlaying READ isPlaying NOTIFY isPlayingChanged)
     Q_PROPERTY(int showDuration READ showDuration NOTIFY showDurationChanged)
@@ -93,9 +95,16 @@ public:
     float timeScale() const;
     void setTimeScale(float timeScale);
 
+    /** Get the size in pixels of the Show header time division */
+    float tickSize() const;
+
     /** Get/Set the Function stretch flag */
     bool stretchFunctions() const;
     void setStretchFunctions(bool stretchFunctions);
+
+    /** Get/Set the grid snapping functionality */
+    bool gridEnabled() const;
+    void setGridEnabled(bool gridEnabled);
 
     /** Get/Set the current time of the Show (aka cursor position) */
     int currentTime() const;
@@ -111,6 +120,7 @@ signals:
     void showNameChanged(QString showName);
     void timeScaleChanged(float timeScale);
     void stretchFunctionsChanged(bool stretchFunction);
+    void gridEnabledChanged(bool gridEnabled);
     void currentTimeChanged(int currentTime);
     void isPlayingChanged(bool playing);
     void showDurationChanged(int showDuration);
@@ -124,9 +134,16 @@ private:
     /** The current time scale of the Show Manager timeline */
     float m_timeScale;
 
+    /** Size in pixels of the Show Manager time division */
+    float m_tickSize;
+
     /** Flag that indicates if a Function should be stretched
      *  when the corresponding Show Item duration changes */
     bool m_stretchFunctions;
+
+    /** Flag that indicates if the Show items should be
+     *  snapped to the closest grid divisor */
+    bool m_gridEnabled;
 
     /** The current time position of the Show */
     int m_currentTime;

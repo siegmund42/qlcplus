@@ -34,6 +34,7 @@
 #define KXMLQLCMonitorGridHeight "Height"
 #define KXMLQLCMonitorGridDepth "Depth"
 #define KXMLQLCMonitorGridUnits "Units"
+#define KXMLQLCMonitorPointOfView "POV"
 #define KXMLQLCMonitorShowLabels "ShowLabels"
 #define KXMLQLCMonitorCommonBackground "Background"
 
@@ -51,15 +52,79 @@
 #define KXMLQLCMonitorFixtureZRotation "ZRot"
 #define KXMLQLCMonitorFixtureGelColor "GelColor"
 
+#define GRID_DEFAULT_WIDTH  5
+#define GRID_DEFAULT_HEIGHT 3
+#define GRID_DEFAULT_DEPTH  5
+
 MonitorProperties::MonitorProperties()
+    : m_displayMode(DMX)
+    , m_channelStyle(DMXChannels)
+    , m_valueStyle(DMXValues)
+    , m_gridSize(QVector3D(GRID_DEFAULT_WIDTH, GRID_DEFAULT_HEIGHT, GRID_DEFAULT_DEPTH))
+    , m_gridUnits(Meters)
+    , m_pointOfView(Undefined)
+    , m_showLabels(false)
 {
     m_font = QFont("Arial", 12);
-    m_displayMode = DMX;
-    m_channelStyle = DMXChannels;
-    m_valueStyle = DMXValues;
-    m_gridSize = QVector3D(5, 3, 5);
-    m_gridUnits = Meters;
-    m_showLabels = false;
+}
+
+void MonitorProperties::setPointOfView(MonitorProperties::PointOfView pov)
+{
+    if (pov == m_pointOfView)
+        return;
+
+    if (m_pointOfView == Undefined)
+    {
+        QVector3D gSize = gridSize();
+        float units = gridUnits() == MonitorProperties::Meters ? 1000.0 : 304.8;
+
+        if (gSize.z() == 0)
+        {
+            // convert the grid size first
+            switch (pov)
+            {
+                case TopView:
+                    setGridSize(QVector3D(gSize.x(), GRID_DEFAULT_HEIGHT, gSize.y()));
+                break;
+                case RightSideView:
+                case LeftSideView:
+                    setGridSize(QVector3D(GRID_DEFAULT_WIDTH, gSize.x(), gSize.x()));
+                break;
+                default:
+                break;
+            }
+        }
+
+        foreach (quint32 fid, fixtureItemsID())
+        {
+            QVector3D pos = fixturePosition(fid);
+            QVector3D newPos;
+
+            switch (pov)
+            {
+                case TopView:
+                {
+                    newPos = QVector3D(pos.x(), 1000, pos.y());
+                }
+                break;
+                case RightSideView:
+                {
+                    newPos = QVector3D(0, pos.y(), (gridSize().z() * units) - pos.x());
+                }
+                break;
+                case LeftSideView:
+                {
+                    newPos = QVector3D(0, pos.y(), pos.x());
+                }
+                break;
+                default:
+                    newPos = QVector3D(pos.x(), (gridSize().y() * units) - pos.y(), 1000);
+                break;
+            }
+            setFixturePosition(fid, newPos);
+        }
+    }
+    m_pointOfView = pov;
 }
 
 void MonitorProperties::removeFixture(quint32 fid)
@@ -85,17 +150,14 @@ void MonitorProperties::setFixtureGelColor(quint32 fid, QColor col)
     m_fixtureItems[fid].m_gelColor = col;
 }
 
-QString MonitorProperties::customBackground(quint32 id)
+QString MonitorProperties::customBackground(quint32 fid)
 {
-    if (m_customBackgroundImages.contains(id))
-        return m_customBackgroundImages[id];
-
-    return QString();
+    return m_customBackgroundImages.value(fid, QString());
 }
 
 void MonitorProperties::reset()
 {
-    m_gridSize = QVector3D(5, 3, 5);
+    m_gridSize = QVector3D(GRID_DEFAULT_WIDTH, GRID_DEFAULT_HEIGHT, GRID_DEFAULT_DEPTH);
     m_gridUnits = Meters;
     m_showLabels = false;
     m_fixtureItems.clear();
@@ -106,7 +168,7 @@ void MonitorProperties::reset()
  * Load & Save
  *********************************************************************/
 
-bool MonitorProperties::loadXML(QXmlStreamReader &root, const Doc * mainDocument)
+bool MonitorProperties::loadXML(QXmlStreamReader &root, const Doc *mainDocument)
 {
     if (root.name() != KXMLQLCMonitorProperties)
     {
@@ -169,6 +231,11 @@ bool MonitorProperties::loadXML(QXmlStreamReader &root, const Doc * mainDocument
             if (tAttrs.hasAttribute(KXMLQLCMonitorGridUnits))
                 setGridUnits(GridUnits(tAttrs.value(KXMLQLCMonitorGridUnits).toString().toInt()));
 
+            if (tAttrs.hasAttribute(KXMLQLCMonitorPointOfView))
+                setPointOfView(PointOfView(tAttrs.value(KXMLQLCMonitorPointOfView).toString().toInt()));
+            else
+                setPointOfView(Undefined);
+
             setGridSize(QVector3D(w, h, d));
             root.skipCurrentElement();
         }
@@ -187,21 +254,21 @@ bool MonitorProperties::loadXML(QXmlStreamReader &root, const Doc * mainDocument
                     pos.setZ(tAttrs.value(KXMLQLCMonitorFixtureZPos).toString().toDouble());
                 setFixturePosition(fid, pos);
 
-#ifdef QMLUI
-                if (tAttrs.hasAttribute(KXMLQLCMonitorFixtureXRotation))
-                    rot.setX(tAttrs.value(KXMLQLCMonitorFixtureXRotation).toString().toDouble());
-                if (tAttrs.hasAttribute(KXMLQLCMonitorFixtureYRotation))
-                    rot.setY(tAttrs.value(KXMLQLCMonitorFixtureYRotation).toString().toDouble());
-                if (tAttrs.hasAttribute(KXMLQLCMonitorFixtureZRotation))
-                    rot.setZ(tAttrs.value(KXMLQLCMonitorFixtureZRotation).toString().toDouble());
-                setFixtureRotation(fid, rot);
-#else
-                if (tAttrs.hasAttribute(KXMLQLCMonitorFixtureRotation))
+                if (tAttrs.hasAttribute(KXMLQLCMonitorFixtureRotation)) // check legacy first
                 {
                     rot.setY(tAttrs.value(KXMLQLCMonitorFixtureRotation).toString().toDouble());
-                    setFixtureRotation(fid, rot);
                 }
-#endif
+                else
+                {
+                    if (tAttrs.hasAttribute(KXMLQLCMonitorFixtureXRotation))
+                        rot.setX(tAttrs.value(KXMLQLCMonitorFixtureXRotation).toString().toDouble());
+                    if (tAttrs.hasAttribute(KXMLQLCMonitorFixtureYRotation))
+                        rot.setY(tAttrs.value(KXMLQLCMonitorFixtureYRotation).toString().toDouble());
+                    if (tAttrs.hasAttribute(KXMLQLCMonitorFixtureZRotation))
+                        rot.setZ(tAttrs.value(KXMLQLCMonitorFixtureZRotation).toString().toDouble());
+                }
+                setFixtureRotation(fid, rot);
+
                 if (tAttrs.hasAttribute(KXMLQLCMonitorFixtureGelColor))
                     setFixtureGelColor(fid, QColor(tAttrs.value(KXMLQLCMonitorFixtureGelColor).toString()));
                 root.skipCurrentElement();
@@ -257,6 +324,9 @@ bool MonitorProperties::saveXML(QXmlStreamWriter *doc, const Doc *mainDocument) 
     doc->writeAttribute(KXMLQLCMonitorGridHeight, QString::number(gridSize().y()));
     doc->writeAttribute(KXMLQLCMonitorGridDepth, QString::number(gridSize().z()));
     doc->writeAttribute(KXMLQLCMonitorGridUnits, QString::number(gridUnits()));
+    if (m_pointOfView != Undefined)
+        doc->writeAttribute(KXMLQLCMonitorPointOfView, QString::number(pointOfView()));
+
     doc->writeEndElement();
 
     foreach (quint32 fid, fixtureItemsID())

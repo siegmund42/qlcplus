@@ -48,6 +48,8 @@ FixtureManager::FixtureManager(QQuickView *view, Doc *doc, QObject *parent)
     , m_colorFilterIndex(0)
     , m_maxPanDegrees(0)
     , m_maxTiltDegrees(0)
+    , m_minBeamDegrees(15.0)
+    , m_maxBeamDegrees(0)
     , m_colorsMask(0)
 {
     Q_ASSERT(m_doc != NULL);
@@ -57,8 +59,8 @@ FixtureManager::FixtureManager(QQuickView *view, Doc *doc, QObject *parent)
     qmlRegisterUncreatableType<QLCCapability>("org.qlcplus.classes", 1, 0, "QLCCapability", "Can't create a QLCCapability !");
     qmlRegisterUncreatableType<ColorFilters>("org.qlcplus.classes", 1, 0, "ColorFilters", "Can't create a ColorFilters !");
 
-    connect(m_doc, &Doc::loaded, this, &FixtureManager::slotDocLoaded);
-    connect(m_doc, &Doc::fixtureGroupAdded, this, &FixtureManager::slotFixtureGroupAdded);
+    connect(m_doc, SIGNAL(loaded()), this, SLOT(slotDocLoaded()));
+    connect(m_doc, SIGNAL(fixtureGroupAdded(quint32)), this, SLOT(slotFixtureGroupAdded(quint32)));
 }
 
 FixtureManager::~FixtureManager()
@@ -106,6 +108,20 @@ void FixtureManager::setSearchFilter(QString searchFilter)
     emit searchFilterChanged();
 }
 
+quint32 FixtureManager::itemID() const
+{
+    return m_itemID;
+}
+
+void FixtureManager::setItemID(quint32 itemID)
+{
+    if (m_itemID == itemID)
+        return;
+
+    m_itemID = itemID;
+    emit itemIDChanged(m_itemID);
+}
+
 QVariantList FixtureManager::universeInfo(quint32 id)
 {
     m_universeInfo.clear();
@@ -130,6 +146,61 @@ QVariantList FixtureManager::universeInfo(quint32 id)
     }
 
     return m_universeInfo;
+}
+
+QVariant FixtureManager::fixtureInfo(quint32 id)
+{
+    QVariantMap fxMap;
+
+    Fixture *fixture = m_doc->fixture(id);
+
+    if (fixture == NULL)
+        return fxMap;
+
+    QLCFixtureDef *def = fixture->fixtureDef();
+    QLCFixtureMode *mode = fixture->fixtureMode();
+
+    if (def == NULL || mode == NULL)
+        return fxMap;
+
+    QLCPhysical phy = mode->physical();
+
+    fxMap.insert("classRef", QVariant::fromValue(fixture));
+    fxMap.insert("manuf", def->manufacturer());
+    fxMap.insert("fmodel", def->model());
+    fxMap.insert("mode", mode->name());
+    fxMap.insert("author", def->author());
+
+    QVariantList channelList;
+    for (QLCChannel *channel : mode->channels())
+    {
+        QVariantMap chMap;
+        chMap.insert("mIcon", channel->getIconNameFromGroup(channel->group(), true));
+        chMap.insert("mLabel", channel->name());
+        channelList.append(chMap);
+    }
+    fxMap.insert("channels", QVariant::fromValue(channelList));
+
+    fxMap.insert("width", phy.width());
+    fxMap.insert("height", phy.height());
+    fxMap.insert("depth", phy.depth());
+    fxMap.insert("weight", phy.weight());
+    fxMap.insert("power", phy.powerConsumption());
+    fxMap.insert("connector", phy.dmxConnector());
+
+    fxMap.insert("bulbType", phy.bulbType());
+    fxMap.insert("bulbLumens", phy.bulbLumens());
+    fxMap.insert("bulbTemp", phy.bulbColourTemperature());
+
+    fxMap.insert("lensType", phy.lensName());
+    fxMap.insert("beamMin", phy.lensDegreesMin());
+    fxMap.insert("beamMax", phy.lensDegreesMax());
+
+    fxMap.insert("headType", phy.focusType());
+    fxMap.insert("panDegrees", phy.focusPanMax());
+    fxMap.insert("tiltDegrees", phy.focusTiltMax());
+
+    return QVariant::fromValue(fxMap);
 }
 
 void FixtureManager::slotDocLoaded()
@@ -257,7 +328,7 @@ bool FixtureManager::deleteFixtures(QVariantList IDList)
 {
     MonitorProperties *mProps = m_doc->monitorProperties();
 
-    foreach(QVariant id, IDList)
+    for (QVariant id : IDList)
     {
         quint32 fxID = id.toUInt();
         Tardis::instance()->enqueueAction(FixtureSetPosition, fxID,
@@ -327,7 +398,7 @@ void FixtureManager::addFixtureGroupTreeNode(Doc *doc, TreeModel *treeModel, Fix
     if (searchFilter.length() < SEARCH_MIN_CHARS || group->name().toLower().contains(searchFilter))
         matchFound |= GroupMatch;
 
-    foreach(quint32 fxID, group->fixtureList())
+    for (quint32 fxID : group->fixtureList())
     {
         Fixture *fixture = doc->fixture(fxID);
         if (fixture == NULL)
@@ -341,7 +412,7 @@ void FixtureManager::addFixtureGroupTreeNode(Doc *doc, TreeModel *treeModel, Fix
             matchFound |= FixtureMatch;
 
         int chIdx = 0;
-        QString chPath = QString("%1/%2").arg(group->name()).arg(fixture->name());
+        QString chPath = QString("%1%2%3").arg(group->name()).arg(TreeModel::separator()).arg(fixture->name());
 
         for (QLCChannel *channel : mode->channels()) // C++11
         {
@@ -425,7 +496,7 @@ void FixtureManager::updateGroupsTree(Doc *doc, TreeModel *treeModel,
         if (searchFilter.length() < SEARCH_MIN_CHARS || fixture->name().toLower().contains(searchFilter))
             matchFound |= FixtureMatch;
 
-        QString chPath = QString("%1/%2").arg(uniNames.at(fixture->universe())).arg(fixture->name());
+        QString chPath = QString("%1%2%3").arg(uniNames.at(fixture->universe())).arg(TreeModel::separator()).arg(fixture->name());
         QLCFixtureMode *mode = fixture->fixtureMode();
         if (mode == NULL)
             continue;
@@ -520,7 +591,7 @@ void FixtureManager::addFixturesToNewGroup(QList<quint32> fxList)
     // For now we use the "old" QLC+ mechanism of calculating an
     // equilateral grid size
     int headsCount = 0;
-    foreach(quint32 id, fxList)
+    for (quint32 id : fxList)
     {
         Fixture* fxi = m_doc->fixture(id);
         if (fxi != NULL)
@@ -532,7 +603,7 @@ void FixtureManager::addFixturesToNewGroup(QList<quint32> fxList)
         side += 1; // Fixture number doesn't provide a full square
 
     group->setSize(QSize(side, side));
-    foreach(quint32 id, fxList)
+    for (quint32 id : fxList)
         group->assignFixture(id);
 
     Tardis::instance()->enqueueAction(FixtureGroupCreate, group->id(), QVariant(),
@@ -545,7 +616,7 @@ void FixtureManager::addFixturesToNewGroup(QList<quint32> fxList)
 
 bool FixtureManager::deleteFixtureGroups(QVariantList IDList)
 {
-    foreach(QVariant id, IDList)
+    for (QVariant id : IDList)
     {
         quint32 groupID = id.toUInt();
         Tardis::instance()->enqueueAction(FixtureGroupDelete, groupID,
@@ -711,11 +782,33 @@ bool FixtureManager::addRGBPanel(QString name, qreal xPos, qreal yPos)
             }
         }
 
-        QVector3D pos(xPos, yPos, 0);
+        QVector3D pos;
+        QVector3D rot;
+        float gridUnits = monProps->gridUnits() == MonitorProperties::Meters ? 1000.0 : 304.8;
+
+        switch (monProps->pointOfView())
+        {
+            case MonitorProperties::TopView:
+                pos = QVector3D(xPos, 0, yPos);
+                rot.setY(180);
+            break;
+            case MonitorProperties::LeftSideView:
+                pos = QVector3D(0, yPos, xPos);
+                rot.setX(180);
+            break;
+            case MonitorProperties::RightSideView:
+                pos = QVector3D(0, yPos, (monProps->gridSize().z() * gridUnits) - xPos);
+                rot.setX(180);
+            break;
+            default:
+                pos = QVector3D(xPos, (monProps->gridSize().y() * gridUnits) - yPos, 0);
+                rot.setZ(180);
+            break;
+        }
         monProps->setFixturePosition(fxi->id(), pos);
         if (displacement == Snake && i % 2)
-            monProps->setFixtureRotation(fxi->id(), QVector3D(0, 180, 0));
-        emit newFixtureCreated(fxi->id(), xPos, yPos, 0);
+            monProps->setFixtureRotation(fxi->id(), rot);
+        emit newFixtureCreated(fxi->id(), pos.x(), pos.y(), pos.z());
         yPos += (qreal)phyHeight;
         currRow += rowInc;
     }
@@ -819,7 +912,7 @@ QVariantList FixtureManager::fixturesMap()
             if (group == QLCChannel::Intensity)
                 m_fixturesMap.append(fx->channel(cn)->colour());
             else
-                m_fixturesMap.append(group - 1);
+                m_fixturesMap.append(group);
         }
         odd = !odd;
 
@@ -1000,6 +1093,11 @@ void FixtureManager::setPresetValue(quint32 fixtureID, int chIndex, quint8 value
     emit presetChanged(ch, value);
 }
 
+void FixtureManager::setBeamValue(quint8 value)
+{
+    emit channelTypeValueChanged(QLCChannel::Beam, value);
+}
+
 void FixtureManager::updateCapabilityCounter(bool update, QString capName, int delta)
 {
     if (update == false)
@@ -1014,6 +1112,12 @@ void FixtureManager::updateCapabilityCounter(bool update, QString capName, int d
             capItem->setProperty("panDegrees", m_maxPanDegrees);
             capItem->setProperty("tiltDegrees", m_maxTiltDegrees);
         }
+        else if (capName == "capBeam")
+        {
+            capItem->setProperty("minBeamDegrees", m_minBeamDegrees);
+            capItem->setProperty("maxBeamDegrees", m_maxBeamDegrees);
+
+        }
     }
 }
 
@@ -1022,13 +1126,18 @@ QMultiHash<int, SceneValue> FixtureManager::getFixtureCapabilities(quint32 fxID,
     int capDelta = enable ? 1 : -1;
     bool hasDimmer = false, hasColor = false, hasPosition = false;
     bool hasShutter = false, hasColorWheel = false, hasGobos = false;
+    bool hasBeam = false;
     int origColorsMask = m_colorsMask;
+    QLCPhysical phy;
 
     QMultiHash<int, SceneValue> channelsMap;
 
     Fixture *fixture = m_doc->fixture(fxID);
     if (fixture == NULL)
         return channelsMap;
+
+    if (fixture->fixtureMode() != NULL)
+        phy = fixture->fixtureMode()->physical();
 
     for (quint32 ch = 0; ch < fixture->channels(); ch++)
     {
@@ -1075,7 +1184,6 @@ QMultiHash<int, SceneValue> FixtureManager::getFixtureCapabilities(quint32 fxID,
                 hasPosition = true;
                 if(fixture->fixtureMode() != NULL)
                 {
-                    QLCPhysical phy = fixture->fixtureMode()->physical();
                     int panDeg = phy.focusPanMax();
                     int tiltDeg = phy.focusTiltMax();
                     // if not set, try to give them reasonable values
@@ -1149,6 +1257,23 @@ QMultiHash<int, SceneValue> FixtureManager::getFixtureCapabilities(quint32 fxID,
                 channelsMap.insert(chType, SceneValue(fxID, ch));
             }
             break;
+            case QLCChannel::Beam:
+            {
+                hasBeam = true;
+                if(fixture->fixtureMode() != NULL)
+                {
+                    double minDeg = phy.lensDegreesMin();
+                    double maxDeg = phy.lensDegreesMax();
+                    if (minDeg == 0) minDeg = 15.0;
+                    if (maxDeg == 0) maxDeg = 30.0;
+                    if (minDeg < m_minBeamDegrees)
+                        m_minBeamDegrees = minDeg;
+                    if (maxDeg > m_maxBeamDegrees)
+                        m_maxBeamDegrees = maxDeg;
+                }
+                channelsMap.insert(chType, SceneValue(fxID, ch));
+            }
+            break;
             default:
             break;
         }
@@ -1163,8 +1288,18 @@ QMultiHash<int, SceneValue> FixtureManager::getFixtureCapabilities(quint32 fxID,
     updateCapabilityCounter(hasShutter, "capShutter", capDelta);
     updateCapabilityCounter(hasColorWheel, "capColorWheel", capDelta);
     updateCapabilityCounter(hasGobos, "capGobos", capDelta);
+    updateCapabilityCounter(hasBeam, "capBeam", capDelta);
 
     return channelsMap;
+}
+
+void FixtureManager::resetCapabilities()
+{
+    m_maxPanDegrees = 0;
+    m_maxTiltDegrees = 0;
+    m_minBeamDegrees = 15.0;
+    m_maxBeamDegrees = 0;
+    m_colorsMask = 0;
 }
 
 QList<SceneValue> FixtureManager::getFixturePosition(quint32 fxID, int type, int degrees)
