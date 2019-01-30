@@ -32,6 +32,12 @@ Popup
 
     onClosed: submenuItem = null
 
+    function saveBeforeExit()
+    {
+        saveFirstPopup.action = "#EXIT"
+        saveFirstPopup.open()
+    }
+
     FileDialog
     {
         id: openDialog
@@ -42,10 +48,29 @@ Popup
 
         onAccepted:
         {
-            console.log("You chose: " + openDialog.fileUrl)
-            qlcplus.loadWorkspace(openDialog.fileUrl)
+            console.log("You chose: " + fileUrl)
+            qlcplus.loadWorkspace(fileUrl)
             console.log("Folder: " + folder.toString())
             qlcplus.workingPath = folder.toString()
+        }
+        onRejected:
+        {
+            console.log("Canceled")
+        }
+    }
+
+    FileDialog
+    {
+        id: importDialog
+        visible: false
+        title: qsTr("Import a workspace")
+        folder: "file://" + qlcplus.workingPath
+        nameFilters: [ qsTr("Workspace files") + " (*.qxw)", qsTr("All files") + " (*)" ]
+
+        onAccepted:
+        {
+            if (qlcplus.loadImportWorkspace(fileUrl) === true)
+                importLoader.source = "qrc:/PopupImportProject.qml"
         }
         onRejected:
         {
@@ -63,8 +88,11 @@ Popup
 
         onAccepted:
         {
-            console.log("You chose: " + saveDialog.fileUrl)
-            qlcplus.saveWorkspace(saveDialog.fileUrl)
+            console.log("You chose: " + fileUrl)
+            qlcplus.saveWorkspace(fileUrl)
+
+            if (saveFirstPopup.action == "#EXIT")
+                qlcplus.exit()
         }
         onRejected:
         {
@@ -79,31 +107,42 @@ Popup
         message: qsTr("Do you wish to save the current workspace first ?\nChanges will be lost if you don't save them.")
         standardButtons: Dialog.Yes | Dialog.No | Dialog.Cancel
 
-        property bool openAction: false
+        property string action: ""
 
         onClicked:
         {
             if (role === Dialog.Yes)
             {
                 if (qlcplus.fileName())
+                {
                     qlcplus.saveWorkspace(qlcplus.fileName())
+                    if (action == "#EXIT")
+                        qlcplus.exit()
+                }
                 else
                 {
-                    //saveDialog.visible = true
                     saveDialog.open()
+                    if (action == "#EXIT")
+                        return
                 }
             }
             else if (role === Dialog.No)
             {
-                if (openAction)
+                if (action == "#OPEN")
                     openDialog.open()
-                else
+                else if (action == "#NEW")
                     qlcplus.newWorkspace()
+                else if (action == "#EXIT")
+                    qlcplus.exit()
+                else
+                    qlcplus.loadWorkspace(action)
             }
             else if (role === Dialog.Cancel)
             {
                 console.log("Cancel clicked")
             }
+
+            action = ""
         }
     }
 
@@ -127,18 +166,19 @@ Popup
             entryText: qsTr("New project")
             onClicked:
             {
-                menuRoot.close()
-
                 if (qlcplus.docModified)
                 {
-                    saveFirstPopup.openAction = false
+                    saveFirstPopup.action = "#NEW"
                     saveFirstPopup.open()
                 }
                 else
                     qlcplus.newWorkspace()
+
+                menuRoot.close()
             }
             onEntered: submenuItem = null
         }
+
         ContextMenuEntry
         {
             id: fileOpen
@@ -146,15 +186,15 @@ Popup
             entryText: qsTr("Open project")
             onClicked:
             {
-                menuRoot.close()
-
                 if (qlcplus.docModified)
                 {
-                    saveFirstPopup.openAction = true
+                    saveFirstPopup.action = "#OPEN"
                     saveFirstPopup.open()
                 }
                 else
                     openDialog.open()
+
+                menuRoot.close()
             }
             onEntered: submenuItem = recentMenu
 
@@ -179,14 +219,22 @@ Popup
                                 entryText: modelData
                                 onClicked:
                                 {
+                                    if (qlcplus.docModified)
+                                    {
+                                        saveFirstPopup.open()
+                                        saveFirstPopup.action = entryText
+                                    }
+                                    else
+                                        qlcplus.loadWorkspace(entryText)
+
                                     menuRoot.close()
-                                    qlcplus.loadWorkspace(entryText)
                                 }
                             }
                         }
                 }
             }
         }
+
         ContextMenuEntry
         {
             id: fileSave
@@ -196,14 +244,15 @@ Popup
 
             onClicked:
             {
-                menuRoot.close()
-
                 if (qlcplus.fileName())
                     qlcplus.saveWorkspace(qlcplus.fileName())
                 else
                     saveDialog.open()
+
+                menuRoot.close()
             }
         }
+
         ContextMenuEntry
         {
             id: fileSaveAs
@@ -213,10 +262,37 @@ Popup
 
             onClicked:
             {
-                menuRoot.close()
                 saveDialog.open()
+                menuRoot.close()
             }
         }
+
+        ContextMenuEntry
+        {
+            id: fileImport
+            imgSource: "qrc:/import.svg"
+            entryText: qsTr("Import from project")
+            onEntered: submenuItem = null
+
+            onClicked:
+            {
+                importDialog.open()
+                menuRoot.close()
+            }
+
+            Loader
+            {
+                id: importLoader
+                onLoaded: item.open()
+
+                Connections
+                {
+                    target: importLoader.item
+                    onClose: importLoader.source = ""
+                }
+            }
+        }
+
         Row
         {
             height: UISettings.iconSizeDefault

@@ -32,16 +32,12 @@
 
 MainView2D::MainView2D(QQuickView *view, Doc *doc, QObject *parent)
     : PreviewContext(view, doc, "2D", parent)
+    , m_gridItem(NULL)
     , m_monProps(doc->monitorProperties())
 {
     setGridSize(m_monProps->gridSize());
     setGridScale(1.0);
     setCellPixels(100);
-
-    m_xOffset = 0;
-    m_yOffset = 0;
-
-    m_contents2D = NULL;
 
     setContextResource("qrc:/2DView.qml");
     setContextTitle(tr("2D View"));
@@ -100,16 +96,13 @@ bool MainView2D::initialize2DProperties()
 {
     setGridSize(m_monProps->gridSize());
 
-    m_contents2D = qobject_cast<QQuickItem*>(contextItem()->findChild<QObject *>("twoDContents"));
+    m_gridItem = qobject_cast<QQuickItem*>(contextItem()->findChild<QObject *>("twoDContents"));
 
-    if (m_contents2D == NULL)
+    if (m_gridItem == NULL)
     {
-        qDebug() << "ERROR: got invalid contents2D" << m_contents2D;
+        qDebug() << "ERROR: got invalid twoDContents" << m_gridItem;
         return false;
     }
-
-    m_xOffset = m_contents2D->property("x").toReal();
-    m_yOffset = m_contents2D->property("y").toReal();
 
     return true;
 }
@@ -119,7 +112,7 @@ void MainView2D::createFixtureItem(quint32 fxID, QVector3D pos, bool mmCoords)
     if (isEnabled() == false)
         return;
 
-    if (m_contents2D == NULL)
+    if (m_gridItem == NULL)
        initialize2DProperties();
 
     qDebug() << "[MainView2D] Creating fixture with ID" << fxID << "pos:" << pos;
@@ -132,7 +125,7 @@ void MainView2D::createFixtureItem(quint32 fxID, QVector3D pos, bool mmCoords)
 
     QQuickItem *newFixtureItem = qobject_cast<QQuickItem*>(fixtureComponent->create());
 
-    newFixtureItem->setParentItem(m_contents2D);
+    newFixtureItem->setParentItem(contextItem());
     newFixtureItem->setProperty("fixtureID", fxID);
 
     if (fxMode != NULL)
@@ -162,10 +155,8 @@ void MainView2D::createFixtureItem(quint32 fxID, QVector3D pos, bool mmCoords)
     if (mmCoords == false && (pos.x() != 0 || pos.y() != 0))
     {
         float gridUnits = m_monProps->gridUnits() == MonitorProperties::Meters ? 1000.0 : 304.8;
-        m_xOffset = m_contents2D->property("x").toReal();
-        m_yOffset = m_contents2D->property("y").toReal();
-        itemPos.setX(((pos.x() - m_xOffset) * gridUnits) / m_cellPixels);
-        itemPos.setY(((pos.y() - m_yOffset) * gridUnits) / m_cellPixels);
+        itemPos.setX((pos.x() * gridUnits) / m_cellPixels);
+        itemPos.setY((pos.y() * gridUnits) / m_cellPixels);
     }
 
     if (m_monProps->hasFixturePosition(fxID))
@@ -181,7 +172,7 @@ void MainView2D::createFixtureItem(quint32 fxID, QVector3D pos, bool mmCoords)
         // add the new fixture to the Doc monitor properties
         QVector3D newPos = FixtureUtils::item3DPosition(m_monProps, itemPos, 1000.0);
         m_monProps->setFixturePosition(fxID, newPos);
-        Tardis::instance()->enqueueAction(FixtureSetPosition, fixture->id(), QVariant(QVector3D(0, 0, 0)), QVariant(newPos));
+        Tardis::instance()->enqueueAction(Tardis::FixtureSetPosition, fixture->id(), QVariant(QVector3D(0, 0, 0)), QVariant(newPos));
     }
 
     newFixtureItem->setProperty("mmXPos", itemPos.x());
@@ -197,13 +188,16 @@ void MainView2D::createFixtureItem(quint32 fxID, QVector3D pos, bool mmCoords)
 }
 
 QList<quint32> MainView2D::selectFixturesRect(QRectF rect)
-{
+{   
     QList<quint32>fxList;
-    QMapIterator<quint32, QQuickItem *> it(m_itemsMap);
-    while (it.hasNext())
+
+    if (rect.width() == 0 || rect.height() == 0)
+        return fxList;
+
+    QMap<quint32, QQuickItem *>::const_iterator i = m_itemsMap.constBegin();
+    while (i != m_itemsMap.constEnd())
     {
-        it.next();
-        QQuickItem *fxItem = it.value();
+        QQuickItem *fxItem = i.value();
         qreal itemXPos = fxItem->property("x").toReal();
         qreal itemYPos = fxItem->property("y").toReal();
         qreal itemWidth = fxItem->property("width").toReal();
@@ -218,11 +212,35 @@ QList<quint32> MainView2D::selectFixturesRect(QRectF rect)
             if (fxItem->property("isSelected").toBool() == false)
             {
                 fxItem->setProperty("isSelected", true);
-                fxList.append(it.key());
+                fxList.append(i.key());
             }
         }
+        ++i;
     }
     return fxList;
+}
+
+int MainView2D::fixtureAtPos(QPointF pos)
+{
+    QMap<quint32, QQuickItem *>::const_iterator i = m_itemsMap.constBegin();
+    while (i != m_itemsMap.constEnd())
+    {
+        QQuickItem *fxItem = i.value();
+        qreal itemXPos = fxItem->property("x").toReal();
+        qreal itemYPos = fxItem->property("y").toReal();
+        qreal itemWidth = fxItem->property("width").toReal();
+        qreal itemHeight = fxItem->property("height").toReal();
+        QRectF itemRect(itemXPos, itemYPos, itemWidth, itemHeight);
+
+        qDebug() << "Point:" << pos << "itemRect:" << itemRect;
+
+        if (itemRect.contains(pos))
+            return i.key();
+
+        ++i;
+    }
+
+    return -1;
 }
 
 void MainView2D::slotRefreshView()
@@ -237,7 +255,7 @@ void MainView2D::slotRefreshView()
 
     if (m_monProps->pointOfView() == MonitorProperties::Undefined)
     {
-        QMetaObject::invokeMethod(m_contents2D, "showPovPopup");
+        QMetaObject::invokeMethod(m_gridItem, "showPovPopup");
         return;
     }
 
@@ -399,7 +417,7 @@ void MainView2D::selectFixture(QQuickItem *fxItem, bool enable)
     }
     else
     {
-        fxItem->setParentItem(m_contents2D);
+        fxItem->setParentItem(contextItem());
     }
 }
 
@@ -486,6 +504,21 @@ void MainView2D::setGridSize(QVector3D sz)
         break;
     }
     emit gridSizeChanged();
+}
+
+QPoint MainView2D::gridPosition() const
+{
+    return m_gridPosition;
+}
+
+void MainView2D::setGridPosition(QPoint pos)
+{
+    if (pos == m_gridPosition)
+        return;
+
+    m_gridPosition = pos;
+
+    emit gridPositionChanged();
 }
 
 int MainView2D::gridUnits() const

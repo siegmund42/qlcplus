@@ -777,17 +777,20 @@ void FunctionManager::deleteSelectedFunctions()
 
         /* When deleting a Sequence, check if the bound Scene ID is still used
          * in the Doc. If not, get rid of it cause otherwise it would stay in the project
-         * forever since bound Scenes are hidden */
+         * forever since bound Scenes are hidden and users cannot delete them */
         if (func->type() == Function::SequenceType)
         {
             Sequence *seq = qobject_cast<Sequence *>(func);
             quint32 boundSceneID = seq->boundSceneID();
             m_doc->deleteFunction(fid);
+
             if (m_doc->getUsage(boundSceneID).count() == 0)
                 m_doc->deleteFunction(boundSceneID);
         }
         else
+        {
             m_doc->deleteFunction(fid);
+        }
 
         QTreeWidgetItem* parent = item->parent();
         delete item;
@@ -902,22 +905,31 @@ void FunctionManager::editFunction(Function* function)
     else if (function->type() == Function::SequenceType)
     {
         Sequence *sequence = qobject_cast<Sequence*> (function);
-        m_editor = new ChaserEditor(m_hsplitter->widget(1), sequence, m_doc);
-        connect(this, SIGNAL(functionManagerActive(bool)),
-                m_editor, SLOT(slotFunctionManagerActive(bool)));
+        Function *sfunc = m_doc->function(sequence->boundSceneID());
 
-        Function* sfunc = m_doc->function(sequence->boundSceneID());
-        if (sfunc->type() == Function::SceneType)
+        if (sfunc == NULL)
         {
-            m_scene_editor = new SceneEditor(m_vsplitter->widget(1), qobject_cast<Scene*> (sfunc), m_doc, false);
+            // The bound Scene no longer exists. Invalidate the Sequence
+            sequence->setBoundSceneID(Function::invalidId());
+        }
+        else
+        {
+            m_editor = new ChaserEditor(m_hsplitter->widget(1), sequence, m_doc);
             connect(this, SIGNAL(functionManagerActive(bool)),
-                    m_scene_editor, SLOT(slotFunctionManagerActive(bool)));
-            /** Signal from chaser editor to scene editor. When a step is clicked apply values immediately */
-            connect(m_editor, SIGNAL(applyValues(QList<SceneValue>&)),
-                    m_scene_editor, SLOT(slotSetSceneValues(QList <SceneValue>&)));
-            /** Signal from scene editor to chaser editor. When a fixture value is changed, update the selected chaser step */
-            connect(m_scene_editor, SIGNAL(fixtureValueChanged(SceneValue, bool)),
-                    m_editor, SLOT(slotUpdateCurrentStep(SceneValue, bool)));
+                    m_editor, SLOT(slotFunctionManagerActive(bool)));
+
+            if (sfunc->type() == Function::SceneType)
+            {
+                m_scene_editor = new SceneEditor(m_vsplitter->widget(1), qobject_cast<Scene*> (sfunc), m_doc, false);
+                connect(this, SIGNAL(functionManagerActive(bool)),
+                        m_scene_editor, SLOT(slotFunctionManagerActive(bool)));
+                /** Signal from chaser editor to scene editor. When a step is clicked apply values immediately */
+                connect(m_editor, SIGNAL(applyValues(QList<SceneValue>&)),
+                        m_scene_editor, SLOT(slotSetSceneValues(QList <SceneValue>&)));
+                /** Signal from scene editor to chaser editor. When a fixture value is changed, update the selected chaser step */
+                connect(m_scene_editor, SIGNAL(fixtureValueChanged(SceneValue, bool)),
+                        m_editor, SLOT(slotUpdateCurrentStep(SceneValue, bool)));
+            }
         }
     }
     else if (function->type() == Function::CollectionType)

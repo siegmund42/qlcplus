@@ -4,7 +4,7 @@
 
 APPNAME    = Q Light Controller Plus
 FXEDNAME   = Fixture Definition Editor
-APPVERSION = 4.11.2 GIT
+APPVERSION = 4.11.2
 
 # Disable these if you don't want to see GIT short hash in the About Box
 #unix:REVISION = $$system(git log --pretty=format:'%h' -n 1)
@@ -36,11 +36,11 @@ contains(FORCECONFIG, release) {
   #DEFINES += QT_NO_DEBUG_OUTPUT
 } else {
   # Enable the following 2 lines when making a release
-  CONFIG         -= release
-#  DEFINES        += QT_NO_DEBUG_OUTPUT
+  CONFIG         += release
+  DEFINES        += QT_NO_DEBUG_OUTPUT
 
   # Disable this when making a release
-  CONFIG         += debug
+  CONFIG         -= debug
 }
 
 !macx:!ios: {
@@ -103,6 +103,7 @@ unix:!macx:DATADIR = share/qlcplus
 macx:DATADIR       = Resources
 android:DATADIR    = /assets
 ios:DATADIR        =
+appimage: DATADIR  = ../share/qlcplus
 
 # User Data
 win32:USERDATADIR      = QLC+
@@ -187,6 +188,7 @@ unix:!macx:PLUGINDIR = $$LIBSDIR/qt4/plugins/qlcplus
 macx:PLUGINDIR       = PlugIns
 android:PLUGINDIR    = Plugins
 ios:PLUGINDIR        = Plugins
+appimage:PLUGINDIR   = ../lib/qt4/plugins/qlcplus
 
 # Audio Plugins
 win32:AUDIOPLUGINDIR      = $$PLUGINDIR/Audio
